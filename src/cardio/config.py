@@ -36,3 +36,10 @@ PRESSURE_RANGES: dict[str, tuple[float, float]] = {
     "ap_hi": (70, 250),  # sistólica em mmHg
     "ap_lo": (40, 200),  # diastólica em mmHg
 }
+
+# --- Split estratificado 70/15/15 (T09) ---
+TRAIN_SIZE = 0.70
+VAL_SIZE = 0.15
+TEST_SIZE = 0.15
+CV_FOLDS = 5
+SPLIT_IDS_PATH = RESULTS_DIR / "split_ids.csv"
