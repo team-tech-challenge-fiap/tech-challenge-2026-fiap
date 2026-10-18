@@ -6,7 +6,6 @@ __pycache__/
 
 data/processed/*
 models/*
-results/figures/*
 
 !data/processed/.gitkeep
 !models/.gitkeep
