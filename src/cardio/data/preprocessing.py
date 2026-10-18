@@ -46,7 +46,7 @@ def clean(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
     Os registros com erro são removidos, e não corrigidos, seguindo a recomendação da T05.
 
     Args:
-        df: DataFrame bruto, como retornado por ``load_dataset()``.
+        df: DataFrame como retornado por ``load_dataset()``.
         verbose: se True, imprime o log de remoções e a taxa de doença antes e depois.
 
     Returns:
@@ -165,9 +165,8 @@ def _get_feature_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
         raise NotImplementedError(
             f"feature_set={feature_set!r} ainda não existe: o conjunto 'B' depende da T10."
         )
-    X = df.drop(columns=[TARGET])
-    X["age"] = X["age"] / 365.25  # idade de dias para anos
-    return X.rename(columns={"age": "age_years"})
+    # idade em anos e sex_male já vêm de load_dataset()
+    return df.drop(columns=[TARGET])
 
 
 def _bmi(df: pd.DataFrame) -> pd.Series:
