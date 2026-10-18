@@ -5,7 +5,7 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
-from .features import build_features
+from ..features.build import build_features
 
 
 def predict(model_path: Path, data: pd.DataFrame):

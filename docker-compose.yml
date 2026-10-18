@@ -1,0 +1,46 @@
+# Uso rápido:
+#   docker compose build
+#   docker compose run --rm train      -> roda o treino (cardio.models.train)
+#   docker compose up app api jupyter  -> sobe demo (8501), API (8000) e Jupyter (8888)
+#   docker compose run --rm tests      -> roda os testes
+
+x-base: &base
+  build: .
+  image: tech-challenge-cardio:latest
+  working_dir: /app
+  volumes:
+    - ./:/app          # código, dados, modelos e relatórios ficam sincronizados com a máquina
+  environment:
+    - PROJECT_ROOT=/app
+    - PYTHONPATH=/app/src
+
+services:
+  train:
+    <<: *base
+    command: python -m cardio.models.train
+    profiles: ["jobs"]
+
+  tests:
+    <<: *base
+    command: pytest -q
+    profiles: ["jobs"]
+
+  jupyter:
+    <<: *base
+    command: >
+      jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+      --ServerApp.token='' --ServerApp.password='' --notebook-dir=/app
+    ports:
+      - "8888:8888"
+
+  api:
+    <<: *base
+    command: uvicorn cardio.api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
+    ports:
+      - "8000:8000"
+
+  app:
+    <<: *base
+    command: streamlit run app/streamlit_app.py --server.address=0.0.0.0 --server.port=8501
+    ports:
+      - "8501:8501"

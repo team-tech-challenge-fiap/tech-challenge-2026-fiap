@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import REQUIRED_COLUMNS, TARGET
+from ..config import REQUIRED_COLUMNS, TARGET
 
 def load_dataset(path: Path) -> pd.DataFrame:
     """Lê o CSV e valida as colunas mínimas esperadas."""

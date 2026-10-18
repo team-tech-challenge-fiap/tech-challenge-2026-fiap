@@ -1,6 +1,6 @@
 import pandas as pd
 
-from cardio.features import build_features
+from cardio.features.build import build_features
 
 
 def test_build_features_creates_age_years_and_bmi() -> None:

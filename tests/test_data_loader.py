@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from cardio.data_loader import load_dataset, split_features_target
+from cardio.data.loader import load_dataset, split_features_target
 
 
 def test_split_features_target_removes_id_and_target() -> None:

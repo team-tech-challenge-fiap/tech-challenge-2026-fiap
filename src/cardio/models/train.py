@@ -9,10 +9,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from .config import DEFAULT_DATASET
-from .data_loader import load_dataset, split_features_target
-from .features import build_features
-from .preprocessing import clean_data
+from ..config import DEFAULT_DATASET
+from ..data.loader import load_dataset, split_features_target
+from ..features.build import build_features
+from ..data.preprocessing import clean_data
 from .evaluate import evaluate
 
 

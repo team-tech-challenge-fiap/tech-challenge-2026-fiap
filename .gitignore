@@ -10,3 +10,10 @@ reports/figures/*
 !data/processed/.gitkeep
 !models/.gitkeep
 !reports/figures/.gitkeep
+
+.ipynb_checkpoints/
+.ruff_cache/
+venv/
+.env
+.vscode/*
+!.vscode/settings.json

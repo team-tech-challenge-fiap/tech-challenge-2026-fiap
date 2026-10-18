@@ -1,0 +1,23 @@
+# Núcleo de dados / ML
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+shap==0.46.0
+joblib==1.4.2
+
+# Visualização
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# Notebooks
+jupyterlab==4.3.1
+ipykernel==6.29.5
+
+# Serviço / demo
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+streamlit==1.40.2
+
+# Testes / qualidade
+pytest==8.3.3
+ruff==0.8.0
