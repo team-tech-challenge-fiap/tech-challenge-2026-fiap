@@ -18,3 +18,15 @@ REQUIRED_COLUMNS = (
     "id", "age", "gender", "height", "weight", "ap_hi", "ap_lo",
     "cholesterol", "gluc", "smoke", "alco", "active", TARGET,
 )
+
+# --- Faixas plausíveis (definidas na T04, aplicadas na limpeza da T08) ---
+# Valores fora dessas faixas são considerados erro de registro.
+PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
+    "height": (130, 210),  # altura em cm
+    "weight": (35, 200),   # peso em kg
+    "bmi": (15, 60),       # IMC em kg/m²
+}
+
+# --- Faixas de IMC da OMS (usadas na EDA e disponíveis para a T10) ---
+BMI_BINS = [0, 18.5, 25, 30, 35, 40, float("inf")]
+BMI_LABELS = ["Abaixo do peso", "Normal", "Sobrepeso", "Obesidade I", "Obesidade II", "Obesidade III"]
