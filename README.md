@@ -15,13 +15,15 @@ data/
 notebooks/
   01_eda.ipynb                   # análise exploratória
 src/cardio/
-  config.py                      # caminhos e contrato do dataset
+  config.py                      # SEED, caminhos e contrato do dataset
   data/
     loader.py                    # leitura + validação das colunas
     preprocessing.py             # limpeza dos dados
   features/
     build.py                     # engenharia de atributos (idade em anos, IMC)
   models/
+    estimators/                  # um arquivo por modelo (T15–T19)
+    tuning.py                    # TODO: busca de hiperparâmetros (T14)
     train.py                     # treino (baseline: regressão logística)
     evaluate.py                  # métricas
     predict.py                   # predição com modelo salvo
@@ -33,12 +35,31 @@ src/cardio/
 app/
   streamlit_app.py               # TODO: interface de demonstração (vídeo)
 models/                          # modelos gerados (.joblib)
-reports/
-  figures/                       # gráficos gerados
+results/
+  figures/                       # gráficos gerados (.png)
   relatorio_tecnico.md           # esqueleto do relatório
 tests/                           # testes automatizados
 Dockerfile · docker-compose.yml · requirements.txt · pyproject.toml
 ```
+
+## Onde fica cada coisa citada nas issues
+
+As issues foram escritas com uma estrutura simplificada. Os caminhos reais são:
+
+| Na issue | No projeto |
+|---|---|
+| `data/cardio_train.csv` | `data/raw/cardio_train.csv` |
+| `src/config.py` | `src/cardio/config.py` |
+| `src/data.py` (T02) | `src/cardio/data/loader.py` |
+| `src/preprocessing.py` (T08, T09, T11) | `src/cardio/data/preprocessing.py` |
+| `src/features.py` (T10) | `src/cardio/features/build.py` |
+| `src/tuning.py` (T14) | `src/cardio/models/tuning.py` |
+| `src/train.py` (T13) | `src/cardio/models/train.py` |
+| `src/evaluate.py` (T20) | `src/cardio/models/evaluate.py` |
+| `src/models/<modelo>.py` (T15–T19) | `src/cardio/models/estimators/<modelo>.py` |
+| `results/figures/` | `results/figures/` |
+
+Imports: `from cardio.config import SEED, DATA_PATH` (o pacote é `cardio`, dentro de `src/`).
 
 ## Executando com Docker
 
@@ -57,7 +78,7 @@ docker compose up jupyter api app     # sobe os serviços
 | API | http://localhost:8000/docs |
 | App (demo) | http://localhost:8501 |
 
-A pasta do projeto é montada como volume: o que for gerado no container aparece em `models/` e `reports/figures/`.
+A pasta do projeto é montada como volume: o que for gerado no container aparece em `models/` e `results/figures/`.
 
 ## Executando sem Docker
 
