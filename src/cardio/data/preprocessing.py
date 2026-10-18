@@ -1,8 +1,22 @@
 """Limpeza e preparação dos dados."""
 
 import pandas as pd
+from sklearn.model_selection import StratifiedKFold, train_test_split
 
-from ..config import PLAUSIBLE_RANGES, PRESSURE_RANGES, TARGET
+from ..config import (
+    CV_FOLDS,
+    DATA_PATH,
+    PLAUSIBLE_RANGES,
+    PRESSURE_RANGES,
+    SEED,
+    SPLIT_IDS_PATH,
+    TARGET,
+    TEST_SIZE,
+    VAL_SIZE,
+)
+from .loader import load_dataset
+
+Splits = tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]
 
 
 def clean_data(data: pd.DataFrame) -> pd.DataFrame:
@@ -79,6 +93,81 @@ def clean(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
         print(f"Taxa de doença: {_pct(taxa_inicial)} → {_pct(data[TARGET].mean())}")
 
     return data
+
+
+def load_splits(feature_set: str = "A", save_ids: bool = True, verbose: bool = False) -> Splits:
+    """Carrega, limpa e divide os dados em treino/validação/teste (70/15/15), estratificado (T09).
+
+    **Todo o time deve usar esta função**, com a mesma ``SEED``, para que os resultados dos
+    modelos sejam comparáveis. O teste é usado uma única vez, no final (T23).
+
+    O split é feito em duas etapas com ``train_test_split(stratify=y, random_state=SEED)``:
+    primeiro separa o teste (15%), depois divide o restante em treino (70%) e validação (15%).
+
+    Args:
+        feature_set: conjunto de features. Por enquanto só "A" (variáveis originais limpas);
+            o "B" (com engenharia de atributos) entra com a ``get_feature_set()`` da T10.
+        save_ids: se True, salva o ``id`` de cada paciente e o conjunto dele em
+            ``config.SPLIT_IDS_PATH`` (``results/split_ids.csv``).
+        verbose: se True, imprime o log da limpeza e o tamanho de cada conjunto.
+
+    Returns:
+        ``(X_train, X_val, X_test, y_train, y_val, y_test)``. O índice dos DataFrames/Series
+        é o ``id`` do paciente; ``id`` e ``cardio`` nunca aparecem nas features.
+    """
+    df = clean(load_dataset(DATA_PATH), verbose=verbose).set_index("id")
+    X = _get_feature_set(df, feature_set)
+    y = df[TARGET]
+
+    X_resto, X_test, y_resto, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, stratify=y, random_state=SEED
+    )
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_resto, y_resto, test_size=VAL_SIZE / (1 - TEST_SIZE), stratify=y_resto, random_state=SEED
+    )
+
+    if save_ids:
+        SPLIT_IDS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        ids = pd.concat([
+            pd.DataFrame({"id": y_train.index, "split": "train"}),
+            pd.DataFrame({"id": y_val.index, "split": "val"}),
+            pd.DataFrame({"id": y_test.index, "split": "test"}),
+        ]).sort_values("id")
+        ids.to_csv(SPLIT_IDS_PATH, index=False)
+
+    if verbose:
+        for nome, alvo in (("Treino", y_train), ("Validação", y_val), ("Teste", y_test)):
+            print(f"{nome}: {_inteiro(len(alvo))} pacientes ({_pct(len(alvo) / len(y))}), "
+                  f"{_pct(alvo.mean())} com doença")
+
+    return X_train, X_val, X_test, y_train, y_val, y_test
+
+
+def get_cv(n_splits: int = CV_FOLDS) -> StratifiedKFold:
+    """Validação cruzada estratificada para usar **dentro do treino** (ex.: busca de hiperparâmetros).
+
+    Args:
+        n_splits: número de partições (padrão: ``config.CV_FOLDS`` = 5).
+
+    Returns:
+        ``StratifiedKFold`` com ``shuffle=True`` e ``random_state=SEED``.
+    """
+    return StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
+
+
+def _get_feature_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
+    """Versão inicial da seleção de features, até a T10 ficar pronta.
+
+    TODO (Michel, T10): substituir pela ``get_feature_set()`` de ``cardio.features``,
+    que vai incluir o conjunto "B" (A + IMC, pressão de pulso, PAM e categorias).
+    """
+    if feature_set != "A":
+        raise NotImplementedError(
+            f"feature_set={feature_set!r} ainda não existe: o conjunto 'B' depende da T10."
+        )
+    X = df.drop(columns=[TARGET])
+    X["age"] = X["age"] / 365.25  # idade de dias para anos
+    return X.rename(columns={"age": "age_years"})
 
 
 def _bmi(df: pd.DataFrame) -> pd.Series:
