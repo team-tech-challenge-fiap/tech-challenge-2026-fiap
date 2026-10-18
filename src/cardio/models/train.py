@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from ..config import DEFAULT_DATASET
+from ..config import DEFAULT_DATASET, MODELS_DIR
 from ..data.loader import load_dataset, split_features_target
 from ..features.build import build_features
 from ..data.preprocessing import clean_data
@@ -32,7 +32,7 @@ def train_model(features, target):
 def main() -> None:
     parser = argparse.ArgumentParser(description="Treina o modelo Cardio.")
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
-    parser.add_argument("--output-dir", type=Path, default=Path("models"))
+    parser.add_argument("--output-dir", type=Path, default=MODELS_DIR)
     args = parser.parse_args()
 
     data = clean_data(load_dataset(args.dataset))

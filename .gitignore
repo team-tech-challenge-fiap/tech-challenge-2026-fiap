@@ -2,14 +2,15 @@
 __pycache__/
 .pytest_cache/
 *.egg-info/
+*.joblib
 
 data/processed/*
 models/*
-reports/figures/*
+results/figures/*
 
 !data/processed/.gitkeep
 !models/.gitkeep
-!reports/figures/.gitkeep
+!results/figures/.gitkeep
 
 .ipynb_checkpoints/
 .ruff_cache/

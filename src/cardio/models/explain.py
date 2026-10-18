@@ -10,5 +10,5 @@ def feature_importance(model, features, target):
 
 
 def shap_summary(model, features):
-    """TODO: gráfico SHAP salvo em reports/figures/."""
+    """TODO: gráfico SHAP salvo em results/figures/."""
     raise NotImplementedError
