@@ -6,6 +6,23 @@ Projeto de análise e classificação de risco cardiovascular usando `cardio_tra
 O dataset deve ser um CSV separado por `;` com as colunas `id`, `age`, `gender`, `height`, `weight`,
 `ap_hi`, `ap_lo`, `cholesterol`, `gluc`, `smoke`, `alco`, `active` e `cardio`.
 
+## Dataset
+
+O dataset é o **Cardiovascular Disease Dataset** do Kaggle:
+<https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset>.
+São 70.000 pacientes e 13 colunas (arquivo `data/raw/cardio_train.csv`, separador `;`).
+
+| Coluna | Significado | Observação |
+|---|---|---|
+| `id` | identificador | **não usar como feature** |
+| `age` | idade | **em dias** (convertida para anos) |
+| `gender` | sexo | 1 = mulher, 2 = homem (as médias de altura confirmam: 161 vs. 170 cm) |
+| `height`, `weight` | altura (cm) e peso (kg) | |
+| `ap_hi`, `ap_lo` | pressão sistólica e diastólica | contém valores impossíveis (tratados na limpeza, T05 e T08) |
+| `cholesterol`, `gluc` | colesterol e glicose | 1 = normal, 2 = acima do normal, 3 = muito acima |
+| `smoke`, `alco`, `active` | fuma, bebe, faz atividade física | autodeclarados (0/1) |
+| `cardio` | **alvo** | 1 = doença cardiovascular |
+
 ## Estrutura
 
 ```text
