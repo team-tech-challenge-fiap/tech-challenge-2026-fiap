@@ -30,7 +30,9 @@ data/
   raw/cardio_train.csv           # dataset original
   processed/                     # dados preparados (gerados)
 notebooks/
-  01_eda.ipynb                   # análise exploratória
+  01_eda_visao_geral.ipynb       # T03: visão geral, alvo e qualidade dos dados
+  02_eda_demografia_imc.ipynb    # T04: idade, sexo, altura, peso e IMC
+  03_eda_pressao_arterial.ipynb  # T05: pressão arterial
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   data/
