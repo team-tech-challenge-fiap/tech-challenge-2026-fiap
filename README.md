@@ -86,22 +86,68 @@ Imports: `from cardio.config import SEED, DATA_PATH` (o pacote é `cardio`, dent
 
 ## Executando com Docker
 
-Pré-requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+Pré-requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e **aberto**.
+A imagem usa `python:3.11-slim` e instala as versões fixadas do `requirements.txt`. O dataset já vai dentro da imagem.
+
+### Opção 1: `docker run` (avaliação / quem só quer rodar o projeto)
 
 ```bash
-docker compose build                  # constrói a imagem
-docker compose run --rm train         # treina o Random Forest (conjunto A) -> models/random_forest_A.joblib
-docker compose run --rm tests         # roda os testes
-docker compose up jupyter api app     # sobe os serviços
+docker build -t cardio-classifier .
 ```
 
-| Serviço | URL |
-|---|---|
-| Jupyter | http://localhost:8888 |
-| API | http://localhost:8000/docs |
-| App (demo) | http://localhost:8501 |
+**Treinar e avaliar** (padrão: Regressão Logística, conjunto A, avaliada na validação). Para os resultados
+aparecerem na sua máquina, monte as pastas `results/` e `models/`:
 
-A pasta do projeto é montada como volume: o que for gerado no container aparece em `models/` e `results/figures/`.
+```powershell
+# Windows (PowerShell)
+docker run --rm -v "${PWD}/results:/app/results" -v "${PWD}/models:/app/models" cardio-classifier
+```
+
+```bash
+# Linux / macOS
+docker run --rm -v "$(pwd)/results:/app/results" -v "$(pwd)/models:/app/models" cardio-classifier
+```
+
+Saída: `models/logistic_A.joblib` e uma linha nova em `results/val_results.csv`. Para outro modelo ou conjunto,
+acrescente o comando no fim:
+
+```bash
+docker run --rm -v "${PWD}/results:/app/results" -v "${PWD}/models:/app/models" cardio-classifier \
+  python -m cardio.models.train --modelo random_forest --features B
+```
+
+**Abrir o Jupyter** e acessar http://localhost:8888 (a pasta do projeto é montada, então o que for salvo nos
+notebooks fica na sua máquina):
+
+```powershell
+docker run --rm -p 8888:8888 -v "${PWD}:/app" cardio-classifier jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token=''
+```
+
+**Rodar os testes:**
+
+```bash
+docker run --rm cardio-classifier pytest -q
+```
+
+### Opção 2: `docker compose` (dia a dia do time)
+
+Monta a pasta inteira do projeto como volume, então alterações no código valem sem reconstruir a imagem.
+
+```bash
+docker compose build                  # constrói a imagem (repetir só quando o requirements.txt mudar)
+docker compose up jupyter             # Jupyter em http://localhost:8888 (Ctrl + C para parar)
+docker compose run --rm train         # treina o Random Forest (conjunto A) -> models/random_forest_A.joblib
+docker compose run --rm tests         # roda os testes
+docker compose up api app             # API (http://localhost:8000/docs) e demo (http://localhost:8501)
+```
+
+### Problemas comuns
+
+| Erro | Solução |
+|---|---|
+| `cannot connect to the Docker daemon` | O Docker Desktop não está aberto |
+| `port is already allocated` | O Jupyter já está rodando em outro terminal: feche-o ou rode `docker compose down` |
+| Resultados não aparecem em `results/` | Faltou o `-v` no `docker run` (sem volume, o que é gerado fica dentro do container) |
 
 ## Executando sem Docker
 

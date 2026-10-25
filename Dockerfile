@@ -22,5 +22,8 @@ COPY . .
 
 EXPOSE 8888 8000 8501
 
-# Padrão: executa o pipeline completo de treino. Os serviços do compose sobrescrevem o comando.
-CMD ["python", "-m", "cardio.models.train"]
+# Padrão: treina e avalia (na validação) o baseline, a Regressão Logística no conjunto A, e grava
+# models/logistic_A.joblib e uma linha em results/val_results.csv.
+# Para outro modelo: docker run cardio-classifier python -m cardio.models.train --modelo random_forest --features B
+# TODO (T23/T29): trocar pelo pipeline final (todos os modelos + avaliação no teste) quando existir.
+CMD ["python", "-m", "cardio.models.train", "--modelo", "logistic", "--features", "A"]
