@@ -79,8 +79,8 @@ def clean(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
          lambda d: d["height"].between(*PLAUSIBLE_RANGES["height"])),
         (f"Peso fora de {PLAUSIBLE_RANGES['weight'][0]}–{PLAUSIBLE_RANGES['weight'][1]} kg",
          lambda d: d["weight"].between(*PLAUSIBLE_RANGES["weight"])),
-        (f"IMC fora de {PLAUSIBLE_RANGES['bmi'][0]}–{PLAUSIBLE_RANGES['bmi'][1]} kg/m²",
-         lambda d: _bmi(d).between(*PLAUSIBLE_RANGES["bmi"])),
+        (f"IMC fora de {PLAUSIBLE_RANGES['imc'][0]}–{PLAUSIBLE_RANGES['imc'][1]} kg/m²",
+         lambda d: _imc(d).between(*PLAUSIBLE_RANGES["imc"])),
     ]
 
     log = []
@@ -224,7 +224,7 @@ def build_preprocessor(X: pd.DataFrame, scale: bool = True) -> ColumnTransformer
     return preprocessor.set_output(transform="pandas")
 
 
-def _bmi(df: pd.DataFrame) -> pd.Series:
+def _imc(df: pd.DataFrame) -> pd.Series:
     """IMC = peso (kg) / altura (m)²."""
     return df["weight"] / (df["height"] / 100) ** 2
 

@@ -25,12 +25,12 @@ REQUIRED_COLUMNS = (
 PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
     "height": (130, 210),  # altura em cm
     "weight": (35, 200),   # peso em kg
-    "bmi": (15, 60),       # IMC em kg/m² (só a chave da faixa; a coluna de features se chama "imc")
+    "imc": (15, 60),       # IMC em kg/m²
 }
 
 # --- Faixas de IMC da OMS (usadas na EDA e disponíveis para a T10) ---
-BMI_BINS = [0, 18.5, 25, 30, 35, 40, float("inf")]
-BMI_LABELS = ["Abaixo do peso", "Normal", "Sobrepeso", "Obesidade I", "Obesidade II", "Obesidade III"]
+IMC_BINS = [0, 18.5, 25, 30, 35, 40, float("inf")]
+IMC_LABELS = ["Abaixo do peso", "Normal", "Sobrepeso", "Obesidade I", "Obesidade II", "Obesidade III"]
 
 # --- Faixas plausíveis de pressão arterial (definidas na T05, aplicadas na limpeza da T08) ---
 PRESSURE_RANGES: dict[str, tuple[float, float]] = {
