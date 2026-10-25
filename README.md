@@ -30,9 +30,7 @@ data/
   raw/cardio_train.csv           # dataset original
   processed/                     # dados preparados (gerados)
 notebooks/
-  01_eda_visao_geral.ipynb       # T03: visão geral, alvo e qualidade dos dados
-  02_eda_demografia_imc.ipynb    # T04: idade, sexo, altura, peso e IMC
-  03_eda_pressao_arterial.ipynb  # T05: pressão arterial
+  01_eda.ipynb                   # análise exploratória
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   data/
@@ -119,3 +117,58 @@ pytest
 - [ ] Avaliação (accuracy, recall, F1) e interpretação (feature importance, SHAP)
 - [ ] Relatório técnico (PDF)
 - [ ] Vídeo de demonstração (até 15 min)
+
+
+
+
+# ============================================================
+# RANDOM FOREST — JUSTIFICATIVA E RESULTADOS PRELIMINARES (T32)
+# ============================================================
+#
+# O algoritmo Random Forest foi selecionado por sua capacidade
+# de identificar relações não lineares entre as características
+# dos pacientes e a presença de doença cardiovascular.
+#
+# Por combinar múltiplas árvores de decisão, o algoritmo pode
+# apresentar maior robustez e capacidade de generalização
+# do que uma árvore de decisão isolada.
+#
+# EXPERIMENTO INICIAL:
+#
+# O modelo foi treinado inicialmente com 5.000 pacientes,
+# apresentando sinais de overfitting:
+#
+# - Acurácia no treinamento: 100,00%
+# - Acurácia na validação: 70,88%
+#
+# Para reduzir o overfitting, foram testados:
+#
+# - n_estimators = 300
+# - max_depth = 10
+# - min_samples_leaf = 20
+#
+# RESULTADOS COM A BASE COMPLETA — FEATURES A:
+#
+# Quantidade de pacientes no treinamento: 47.955
+#
+# - Acurácia no treinamento: 74,62%
+# - Acurácia na validação: 72,71%
+# - Precision: 75,10%
+# - Recall: 67,09%
+# - F1-score: 70,87%
+# - AUC ROC: 79,10%
+#
+# A diferença entre as acurácias de treinamento e validação
+# foi de 1,91 ponto percentual, sugerindo uma redução
+# significativa do overfitting observado inicialmente.
+#
+# PENDÊNCIAS:
+#
+# - T10: Implementação do conjunto de features B.
+# - T14: Busca automatizada dos melhores hiperparâmetros.
+#
+# Os resultados apresentados são preliminares.
+# A documentação será atualizada após a execução do tuning
+# e a comparação entre os conjuntos de features A e B.
+#
+# ============================================================
