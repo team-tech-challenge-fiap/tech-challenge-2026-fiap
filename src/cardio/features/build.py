@@ -21,6 +21,13 @@ FEATURES_A = [
 FEATURES_DERIVADAS = ["imc", "pressao_pulso", "pam", "categoria_pressao", "faixa_imc"]
 FEATURES_B = FEATURES_A + FEATURES_DERIVADAS
 
+# --- Tipo de cada coluna, usado por build_preprocessor() (T11) ---
+# Toda coluna dos conjuntos A e B precisa estar em exatamente um dos grupos.
+COLUNAS_CONTINUAS = ["age_years", "height", "weight", "ap_hi", "ap_lo", "imc", "pressao_pulso", "pam"]
+COLUNAS_ORDINAIS = ["cholesterol", "gluc"]  # 1 < 2 < 3
+COLUNAS_BINARIAS = ["sex_male", "smoke", "alco", "active"]
+COLUNAS_NOMINAIS = ["categoria_pressao", "faixa_imc"]
+
 # Mesmas faixas de IMC da OMS do config, agrupando tudo a partir de 30 como "Obesidade".
 FAIXA_IMC_BINS = BMI_BINS[:4] + [float("inf")]
 FAIXA_IMC_LABELS = ["Abaixo do peso", "Normal", "Sobrepeso", "Obesidade"]

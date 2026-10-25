@@ -40,7 +40,7 @@ src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   data/
     loader.py                    # leitura + validação das colunas, conversão de idade e sexo
-    preprocessing.py             # limpeza (clean), split 70/15/15 (load_splits) e get_cv
+    preprocessing.py             # limpeza (clean), split 70/15/15 (load_splits), get_cv e build_preprocessor (T11)
   features/
     build.py                     # T10: add_features, categorizar_pressao e conjuntos A e B
   models/

@@ -25,7 +25,7 @@ REQUIRED_COLUMNS = (
 PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
     "height": (130, 210),  # altura em cm
     "weight": (35, 200),   # peso em kg
-    "bmi": (15, 60),       # IMC em kg/m²
+    "bmi": (15, 60),       # IMC em kg/m² (só a chave da faixa; a coluna de features se chama "imc")
 }
 
 # --- Faixas de IMC da OMS (usadas na EDA e disponíveis para a T10) ---

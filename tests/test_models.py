@@ -16,13 +16,16 @@ def test_ha_modelos_para_testar() -> None:
     assert {"example", "random_forest"} <= set(MODELOS)
 
 
+@pytest.mark.parametrize("conjunto", ["A", "B"])
 @pytest.mark.parametrize("nome", MODELOS)
-def test_modelo_segue_o_contrato(nome: str) -> None:
+def test_modelo_segue_o_contrato(nome: str, conjunto: str) -> None:
     modulo = import_module(f"cardio.models.estimators.{nome}")
-    X_train = load_splits("A", save_ids=False)[0].head(200)
+    X_train, _, _, y_train, *_ = load_splits(conjunto, save_ids=False)
+    X_train, y_train = X_train.head(300), y_train.head(300)
 
     pipeline = modulo.build_model(X_train)
 
     assert isinstance(pipeline, Pipeline)
-    assert pipeline.steps[-1][0] == "model"  # os PARAM_GRID usam o prefixo "model__"
+    assert [passo for passo, _ in pipeline.steps] == ["prep", "model"]  # PARAM_GRID usa "model__"
     assert all(chave.startswith("model__") for chave in modulo.PARAM_GRID)
+    assert pipeline.fit(X_train, y_train).predict(X_train).shape == (300,)
