@@ -99,8 +99,8 @@ def test_categoria_nova_na_validacao_e_ignorada(splits) -> None:
 
 def test_coluna_desconhecida_levanta_erro(splits) -> None:
     X_train, *_ = splits["A"]
-    with pytest.raises(ValueError, match="bmi"):
-        build_preprocessor(X_train.assign(bmi=1.0))
+    with pytest.raises(ValueError, match="coluna_inexistente"):
+        build_preprocessor(X_train.assign(coluna_inexistente=1.0))
 
 
 def test_pipeline_com_preprocessador_treina_e_prediz_com_b(splits) -> None:

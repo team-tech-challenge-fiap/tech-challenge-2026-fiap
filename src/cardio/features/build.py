@@ -8,7 +8,7 @@ calculadas antes do split sem vazamento de dados. As colunas de entrada são as 
 import numpy as np
 import pandas as pd
 
-from ..config import BMI_BINS
+from ..config import IMC_BINS
 
 # --- Conjunto A: variáveis originais limpas ---
 FEATURES_A = [
@@ -29,7 +29,7 @@ COLUNAS_BINARIAS = ["sex_male", "smoke", "alco", "active"]
 COLUNAS_NOMINAIS = ["categoria_pressao", "faixa_imc"]
 
 # Mesmas faixas de IMC da OMS do config, agrupando tudo a partir de 30 como "Obesidade".
-FAIXA_IMC_BINS = BMI_BINS[:4] + [float("inf")]
+FAIXA_IMC_BINS = IMC_BINS[:4] + [float("inf")]
 FAIXA_IMC_LABELS = ["Abaixo do peso", "Normal", "Sobrepeso", "Obesidade"]
 
 

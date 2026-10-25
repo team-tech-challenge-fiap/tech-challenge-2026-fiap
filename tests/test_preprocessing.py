@@ -42,7 +42,7 @@ def test_clean_no_dataset_real_deixa_tudo_dentro_das_faixas() -> None:
     limpo = clean(bruto, verbose=False)
 
     for coluna, (minimo, maximo) in {**PRESSURE_RANGES, **PLAUSIBLE_RANGES}.items():
-        valores = limpo["weight"] / (limpo["height"] / 100) ** 2 if coluna == "bmi" else limpo[coluna]
+        valores = limpo["weight"] / (limpo["height"] / 100) ** 2 if coluna == "imc" else limpo[coluna]
         assert valores.between(minimo, maximo).all(), f"{coluna} fora da faixa"
     assert (limpo["ap_lo"] < limpo["ap_hi"]).all()
     assert not limpo.drop(columns="id").duplicated().any()
