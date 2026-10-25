@@ -3,6 +3,8 @@
 from sklearn.dummy import DummyClassifier
 from sklearn.pipeline import Pipeline
 
+from ...data.preprocessing import build_preprocessor
+
 PARAM_GRID = {}
 
 
@@ -11,6 +13,6 @@ def build_model(X_train):
     model = DummyClassifier(strategy="most_frequent")
 
     return Pipeline([
-        # TODO (T11): ("prep", build_preprocessor(X_train)),
+        ("prep", build_preprocessor(X_train)),
         ("model", model),
     ])

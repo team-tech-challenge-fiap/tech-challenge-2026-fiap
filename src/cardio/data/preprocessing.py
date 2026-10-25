@@ -1,7 +1,9 @@
 """Limpeza e preparação dos dados."""
 
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from ..config import (
     CV_FOLDS,
@@ -14,7 +16,13 @@ from ..config import (
     TEST_SIZE,
     VAL_SIZE,
 )
-from ..features.build import get_feature_set
+from ..features.build import (
+    COLUNAS_BINARIAS,
+    COLUNAS_CONTINUAS,
+    COLUNAS_NOMINAIS,
+    COLUNAS_ORDINAIS,
+    get_feature_set,
+)
 from .loader import load_dataset
 
 Splits = tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]
@@ -117,6 +125,9 @@ def load_splits(feature_set: str = "A", save_ids: bool = True, verbose: bool = F
         é o ``id`` do paciente; ``id`` e ``cardio`` nunca aparecem nas features.
     """
     df = clean(load_dataset(DATA_PATH), verbose=verbose).set_index("id")
+    # O log da limpeza (um DataFrame) não deve acompanhar X e y: o pandas não consegue compará-lo
+    # no pd.concat que o ColumnTransformer faz quando há colunas em "passthrough".
+    df.attrs = {}
     X = get_feature_set(df, feature_set)
     y = df[TARGET]
 
@@ -154,6 +165,63 @@ def get_cv(n_splits: int = CV_FOLDS) -> StratifiedKFold:
         ``StratifiedKFold`` com ``shuffle=True`` e ``random_state=SEED``.
     """
     return StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
+
+
+def build_preprocessor(X: pd.DataFrame, scale: bool = True) -> ColumnTransformer:
+    """Pré-processador que entra no início de **todos** os modelos (T11).
+
+    Devolve um ``ColumnTransformer`` **sem ajuste**: ele deve ser o passo ``"prep"`` de um
+    ``Pipeline``, para ser ajustado só no treino (e, na validação cruzada, só em cada treino de fold).
+    As colunas são escolhidas pelo nome (ver ``cardio.features.build``), então o mesmo código serve
+    aos conjuntos A e B:
+
+    - contínuas (idade, altura, peso, pressões, IMC, pressão de pulso, PAM): ``StandardScaler``;
+      essencial para KNN, SVM e Regressão Logística;
+    - ordinais (``cholesterol``, ``gluc``): mantidas como 1, 2 e 3, que já estão em ordem;
+    - binárias (``sex_male``, ``smoke``, ``alco``, ``active``): mantidas como 0/1;
+    - nominais do conjunto B (``categoria_pressao``, ``faixa_imc``): ``OneHotEncoder``, ignorando
+      categorias que só aparecem na validação/teste.
+
+    Args:
+        X: features de treino; só as colunas são usadas.
+        scale: se False, as contínuas passam sem escalonar (Random Forest e XGBoost não precisam).
+
+    Returns:
+        ``ColumnTransformer`` cuja saída é um DataFrame com nomes de coluna legíveis
+        (``get_feature_names_out()``), para a feature importance e o SHAP (T24 e T25).
+
+    Raises:
+        ValueError: se ``X`` tiver uma coluna que não pertence a nenhum grupo. Assim um nome de
+            coluna diferente do esperado aparece na hora, em vez de a coluna ser descartada.
+    """
+    grupos = {
+        "num": COLUNAS_CONTINUAS,
+        "ord": COLUNAS_ORDINAIS,
+        "bin": COLUNAS_BINARIAS,
+        "cat": COLUNAS_NOMINAIS,
+    }
+    conhecidas = {coluna for colunas in grupos.values() for coluna in colunas}
+    desconhecidas = [coluna for coluna in X.columns if coluna not in conhecidas]
+    if desconhecidas:
+        raise ValueError(
+            f"Colunas sem tratamento definido no pré-processador: {', '.join(map(str, desconhecidas))}"
+        )
+
+    def presentes(nome: str) -> list[str]:
+        return [coluna for coluna in grupos[nome] if coluna in X.columns]
+
+    transformers = [
+        ("num", StandardScaler() if scale else "passthrough", presentes("num")),
+        ("ord", "passthrough", presentes("ord")),
+        ("bin", "passthrough", presentes("bin")),
+        ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), presentes("cat")),
+    ]
+    preprocessor = ColumnTransformer(
+        [(nome, transformer, colunas) for nome, transformer, colunas in transformers if colunas],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+    return preprocessor.set_output(transform="pandas")
 
 
 def _bmi(df: pd.DataFrame) -> pd.Series:

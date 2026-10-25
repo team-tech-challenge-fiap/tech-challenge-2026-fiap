@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 
 from ...config import SEED
+from ...data.preprocessing import build_preprocessor
 
 PARAM_GRID = {
     "model__max_depth": [6, 10, 14, None],
@@ -23,6 +24,6 @@ def build_model(X_train):
     )
 
     return Pipeline([
-        # TODO (T11): ("prep", build_preprocessor(X_train, scale=False)),
+        ("prep", build_preprocessor(X_train, scale=False)),
         ("model", model),
     ])
