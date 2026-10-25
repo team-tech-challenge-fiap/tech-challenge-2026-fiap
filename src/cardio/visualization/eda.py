@@ -1,14 +1,16 @@
+"""Gráficos da EDA, a partir de ``load_dataset()`` + ``clean()`` (``age_years`` em anos)."""
 
-import importlib
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd 
-from cardio.features import categorizar_pressao
+import pandas as pd
+
+from ..config import SEED
+from ..features.build import categorizar_pressao
 
 descricao = {
     "id": "Identificador do paciente",
-    "age": "Idade",
-    "gender": "Sexo",
+    "age_years": "Idade (anos)",
+    "sex_male": "Sexo masculino",
     "height": "Altura (cm)",
     "weight": "Peso (kg)",
     "ap_hi": "Pressão arterial sistólica (mmHg)",
@@ -28,9 +30,9 @@ def plot_idade_tabagismo_cardio(df):
     
     fig, aux = plt.subplots(figsize=(12, 5))
    
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(SEED)
 
-    idade_jitter = df["age"] + rng.uniform(-0.3, 0.3, len(df))
+    idade_jitter = df["age_years"] + rng.uniform(-0.3, 0.3, len(df))
     cardio_jitter = df["cardio"] + rng.uniform(-0.08, 0.08, len(df))
   
     scatter = aux.scatter (
@@ -76,7 +78,7 @@ def plot_matriz_correlacao(df):
     fig, ax = plt.subplots(figsize=(10, 8))
 
     colunas = [
-    "age",
+    "age_years",
     "ap_hi",
     "ap_lo",
     "cholesterol",
@@ -104,7 +106,7 @@ def plot_distribuicao_idade(df):
 
     fig, ax = plt.subplots(figsize=(10, 8))
 
-    hist = ax.hist(df["age"])
+    hist = ax.hist(df["age_years"])
 
     ax.set_xlabel("Idade")
     ax.set_ylabel("Quantidade de Pacientes")
@@ -122,9 +124,9 @@ def plot_distribuicao_pressao_arterial(df):
 
     for ax, coluna in zip(axes, colunas):
         hist = ax.hist(df[coluna], bins=30, color="blue", alpha=0.7)
-    ax.set_xlabel(descricao[coluna])
-    ax.set_ylabel("Quantidade de Pacientes")
-    ax.set_title(f"Distribuição de {descricao[coluna]}")
+        ax.set_xlabel(descricao[coluna])
+        ax.set_ylabel("Quantidade de Pacientes")
+        ax.set_title(f"Distribuição de {descricao[coluna]}")
 
     plt.tight_layout()
     plt.show()
@@ -192,28 +194,28 @@ def plot_colesterol_cardio(df):
     ax.set_xlim(0, 100)
     ax.legend()
 
-    for i, categoria in enumerate(tabela.index):
+    for categoria in tabela.index:
         sem_doenca = tabela.loc[categoria, 0]
         com_doenca = tabela.loc[categoria, 1]
 
-    ax.text(
-        sem_doenca / 2, categoria,
-        f"{sem_doenca:.1f}%",
-        ha="center",
-        va="center",
-        color="white"
-    )
+        ax.text(
+            sem_doenca / 2, categoria,
+            f"{sem_doenca:.1f}%",
+            ha="center",
+            va="center",
+            color="white"
+        )
 
-    ax.text(
-        sem_doenca + com_doenca / 2, categoria,
-        f"{com_doenca:.1f}%",
-        ha="center",
-        va="center",
-        color="white"
-    )
+        ax.text(
+            sem_doenca + com_doenca / 2, categoria,
+            f"{com_doenca:.1f}%",
+            ha="center",
+            va="center",
+            color="white"
+        )
 
-plt.tight_layout()
-plt.show()
+    plt.tight_layout()
+    plt.show()
 
 # 9. Glicose × doença cardiovascular
 def plot_glicose_cardio(df):
@@ -235,28 +237,28 @@ def plot_glicose_cardio(df):
     ax.set_xlim(0, 100)
     ax.legend()
 
-    for i, categoria in enumerate(tabela.index):
+    for categoria in tabela.index:
         sem_doenca = tabela.loc[categoria, 0]
         com_doenca = tabela.loc[categoria, 1]
 
-    ax.text(
-        sem_doenca / 2, categoria,
-        f"{sem_doenca:.1f}%",
-        ha="center",
-        va="center",
-        color="white"
-    )
+        ax.text(
+            sem_doenca / 2, categoria,
+            f"{sem_doenca:.1f}%",
+            ha="center",
+            va="center",
+            color="white"
+        )
 
-    ax.text(
-        sem_doenca + com_doenca / 2, categoria,
-        f"{com_doenca:.1f}%",
-        ha="center",
-        va="center",
-        color="white"
-    )
+        ax.text(
+            sem_doenca + com_doenca / 2, categoria,
+            f"{com_doenca:.1f}%",
+            ha="center",
+            va="center",
+            color="white"
+        )
 
-plt.tight_layout()
-plt.show()
+    plt.tight_layout()
+    plt.show()
 
 # 10. Doença cardiovascular por faixa etária e tabagismo
 def plot_faixa_etaria_tabagismo_cardio(df):
@@ -264,7 +266,7 @@ def plot_faixa_etaria_tabagismo_cardio(df):
     df2 = df.copy()
 
     df2["faixa_etaria"] = pd.cut(
-    df2["age"],
+    df2["age_years"],
     bins=[20, 30, 40, 50, 60, 70, 80],
     right=False)
 

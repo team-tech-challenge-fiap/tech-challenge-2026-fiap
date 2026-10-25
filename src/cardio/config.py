@@ -10,6 +10,7 @@ DATA_PATH = PROJECT_ROOT / "data" / "raw" / "cardio_train.csv"
 RESULTS_DIR = PROJECT_ROOT / "results"
 FIGURES_DIR = RESULTS_DIR / "figures"
 MODELS_DIR = PROJECT_ROOT / "models"
+VAL_RESULTS_PATH = RESULTS_DIR / "val_results.csv"
 
 DEFAULT_DATASET = DATA_PATH  # nome antigo, mantido por compatibilidade
 
