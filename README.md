@@ -30,22 +30,28 @@ data/
   raw/cardio_train.csv           # dataset original
   processed/                     # dados preparados (gerados)
 notebooks/
-  01_eda.ipynb                   # análise exploratória
+  00_projeto_final.ipynb         # notebook de ponta a ponta (T29, em construção)
+  01_eda.ipynb                   # EDA exploratória inicial
+  01_eda_visao_geral.ipynb       # T03: visão geral, alvo e qualidade dos dados
+  02_eda_demografia_imc.ipynb    # T04: idade, sexo, altura, peso e IMC
+  03_eda_pressao_arterial.ipynb  # T05: pressão arterial
+  03_feature_engineering.ipynb   # T10: variáveis derivadas e conjuntos A e B
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   data/
-    loader.py                    # leitura + validação das colunas
-    preprocessing.py             # limpeza dos dados
+    loader.py                    # leitura + validação das colunas, conversão de idade e sexo
+    preprocessing.py             # limpeza (clean), split 70/15/15 (load_splits) e get_cv
   features/
-    build.py                     # engenharia de atributos (idade em anos, IMC)
+    build.py                     # T10: add_features, categorizar_pressao e conjuntos A e B
   models/
-    estimators/                  # um arquivo por modelo (T15–T19)
+    estimators/                  # um arquivo por modelo: build_model() + PARAM_GRID (T13, T15–T19)
     tuning.py                    # TODO: busca de hiperparâmetros (T14)
-    train.py                     # treino (baseline: regressão logística)
+    train.py                     # CLI de treino: --modelo, --features, --sample (T13)
     evaluate.py                  # métricas
     predict.py                   # predição com modelo salvo
     explain.py                   # TODO: feature importance / SHAP
   visualization/
+    eda.py                       # gráficos da EDA
     plots.py                     # TODO: gráficos para o relatório
   api/
     main.py                      # API FastAPI (/health; /predict TODO)
@@ -84,7 +90,7 @@ Pré-requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/
 
 ```bash
 docker compose build                  # constrói a imagem
-docker compose run --rm train         # treina o modelo -> models/cardio_model.joblib
+docker compose run --rm train         # treina o Random Forest (conjunto A) -> models/random_forest_A.joblib
 docker compose run --rm tests         # roda os testes
 docker compose up jupyter api app     # sobe os serviços
 ```
@@ -103,9 +109,13 @@ A pasta do projeto é montada como volume: o que for gerado no container aparece
 python -m venv .venv
 .venv\Scripts\activate
 python -m pip install -e ".[dev]"
-cardio-train --dataset data/raw/cardio_train.csv --output-dir models
+python -m cardio.models.train --modelo random_forest --features A   # ou: cardio-train --modelo ...
 pytest
 ```
+
+O treino usa `load_splits()` (70/15/15), avalia na **validação**, salva `models/<modelo>_<A|B>.joblib` e
+acrescenta uma linha em `results/val_results.csv`. `--modelo` é o nome de um arquivo em
+`src/cardio/models/estimators/`; use `--sample 5000` para testes rápidos.
 
 ## Entregáveis (checklist)
 
@@ -117,58 +127,3 @@ pytest
 - [ ] Avaliação (accuracy, recall, F1) e interpretação (feature importance, SHAP)
 - [ ] Relatório técnico (PDF)
 - [ ] Vídeo de demonstração (até 15 min)
-
-
-
-
-# ============================================================
-# RANDOM FOREST — JUSTIFICATIVA E RESULTADOS PRELIMINARES (T32)
-# ============================================================
-#
-# O algoritmo Random Forest foi selecionado por sua capacidade
-# de identificar relações não lineares entre as características
-# dos pacientes e a presença de doença cardiovascular.
-#
-# Por combinar múltiplas árvores de decisão, o algoritmo pode
-# apresentar maior robustez e capacidade de generalização
-# do que uma árvore de decisão isolada.
-#
-# EXPERIMENTO INICIAL:
-#
-# O modelo foi treinado inicialmente com 5.000 pacientes,
-# apresentando sinais de overfitting:
-#
-# - Acurácia no treinamento: 100,00%
-# - Acurácia na validação: 70,88%
-#
-# Para reduzir o overfitting, foram testados:
-#
-# - n_estimators = 300
-# - max_depth = 10
-# - min_samples_leaf = 20
-#
-# RESULTADOS COM A BASE COMPLETA — FEATURES A:
-#
-# Quantidade de pacientes no treinamento: 47.955
-#
-# - Acurácia no treinamento: 74,62%
-# - Acurácia na validação: 72,71%
-# - Precision: 75,10%
-# - Recall: 67,09%
-# - F1-score: 70,87%
-# - AUC ROC: 79,10%
-#
-# A diferença entre as acurácias de treinamento e validação
-# foi de 1,91 ponto percentual, sugerindo uma redução
-# significativa do overfitting observado inicialmente.
-#
-# PENDÊNCIAS:
-#
-# - T10: Implementação do conjunto de features B.
-# - T14: Busca automatizada dos melhores hiperparâmetros.
-#
-# Os resultados apresentados são preliminares.
-# A documentação será atualizada após a execução do tuning
-# e a comparação entre os conjuntos de features A e B.
-#
-# ============================================================

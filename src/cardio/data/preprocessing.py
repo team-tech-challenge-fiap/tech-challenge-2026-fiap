@@ -14,6 +14,7 @@ from ..config import (
     TEST_SIZE,
     VAL_SIZE,
 )
+from ..features.build import get_feature_set
 from .loader import load_dataset
 
 Splits = tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]
@@ -105,8 +106,8 @@ def load_splits(feature_set: str = "A", save_ids: bool = True, verbose: bool = F
     primeiro separa o teste (15%), depois divide o restante em treino (70%) e validação (15%).
 
     Args:
-        feature_set: conjunto de features. Por enquanto só "A" (variáveis originais limpas);
-            o "B" (com engenharia de atributos) entra com a ``get_feature_set()`` da T10.
+        feature_set: conjunto de features: "A" (variáveis originais limpas) ou "B" (A + as 5
+            variáveis derivadas de ``cardio.features.build``).
         save_ids: se True, salva o ``id`` de cada paciente e o conjunto dele em
             ``config.SPLIT_IDS_PATH`` (``results/split_ids.csv``).
         verbose: se True, imprime o log da limpeza e o tamanho de cada conjunto.
@@ -116,7 +117,7 @@ def load_splits(feature_set: str = "A", save_ids: bool = True, verbose: bool = F
         é o ``id`` do paciente; ``id`` e ``cardio`` nunca aparecem nas features.
     """
     df = clean(load_dataset(DATA_PATH), verbose=verbose).set_index("id")
-    X = _get_feature_set(df, feature_set)
+    X = get_feature_set(df, feature_set)
     y = df[TARGET]
 
     X_resto, X_test, y_resto, y_test = train_test_split(
@@ -153,20 +154,6 @@ def get_cv(n_splits: int = CV_FOLDS) -> StratifiedKFold:
         ``StratifiedKFold`` com ``shuffle=True`` e ``random_state=SEED``.
     """
     return StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
-
-
-def _get_feature_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
-    """Versão inicial da seleção de features, até a T10 ficar pronta.
-
-    TODO (Michel, T10): substituir pela ``get_feature_set()`` de ``cardio.features``,
-    que vai incluir o conjunto "B" (A + IMC, pressão de pulso, PAM e categorias).
-    """
-    if feature_set != "A":
-        raise NotImplementedError(
-            f"feature_set={feature_set!r} ainda não existe: o conjunto 'B' depende da T10."
-        )
-    # idade em anos e sex_male já vêm de load_dataset()
-    return df.drop(columns=[TARGET])
 
 
 def _bmi(df: pd.DataFrame) -> pd.Series:

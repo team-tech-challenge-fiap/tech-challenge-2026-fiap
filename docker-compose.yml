@@ -1,6 +1,6 @@
 # Uso rápido:
 #   docker compose build
-#   docker compose run --rm train      -> roda o treino (cardio.models.train)
+#   docker compose run --rm train      -> treina o Random Forest no conjunto A (cardio.models.train)
 #   docker compose up app api jupyter  -> sobe demo (8501), API (8000) e Jupyter (8888)
 #   docker compose run --rm tests      -> roda os testes
 
@@ -17,7 +17,7 @@ x-base: &base
 services:
   train:
     <<: *base
-    command: python -m cardio.models.train
+    command: python -m cardio.models.train --modelo random_forest --features A
     profiles: ["jobs"]
 
   tests:
