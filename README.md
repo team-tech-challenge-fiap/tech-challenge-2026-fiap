@@ -31,11 +31,12 @@ data/
   processed/                     # dados preparados (gerados)
 notebooks/
   00_projeto_final.ipynb         # notebook de ponta a ponta (T29, em construção)
-  01_eda.ipynb                   # EDA exploratória inicial
   01_eda_visao_geral.ipynb       # T03: visão geral, alvo e qualidade dos dados
   02_eda_demografia_imc.ipynb    # T04: idade, sexo, altura, peso e IMC
   03_eda_pressao_arterial.ipynb  # T05: pressão arterial
-  03_feature_engineering.ipynb   # T10: variáveis derivadas e conjuntos A e B
+  04_eda_exames_habitos.ipynb    # T06: colesterol, glicose e hábitos de vida
+  05_feature_engineering.ipynb   # T10: variáveis derivadas e conjuntos A e B
+  06_modelo_regressao_logistica.ipynb  # T15: regressão logística (baseline) e odds ratio
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   data/
