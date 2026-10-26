@@ -38,6 +38,7 @@ notebooks/
   05_feature_engineering.ipynb   # T10: variáveis derivadas e conjuntos A e B
   06_modelo_regressao_logistica.ipynb  # T15: regressão logística (baseline) e odds ratio
   07_ajuste_limiar.ipynb         # T22: ajuste do limiar de decisão (recall >= 0,80) e impacto por 1.000 pacientes
+  08_eda_correlacao.ipynb        # T07: correlação, multicolinearidade, checagem de vazamento e relações não lineares
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   data/
@@ -74,6 +75,7 @@ As issues foram escritas com uma estrutura simplificada. Os caminhos reais são:
 | Na issue | No projeto |
 |---|---|
 | `data/cardio_train.csv` | `data/raw/cardio_train.csv` |
+| `notebooks/05_eda_correlacao.ipynb` (T07) | `notebooks/08_eda_correlacao.ipynb` (o 05 já é a T10) |
 | `src/config.py` | `src/cardio/config.py` |
 | `src/data.py` (T02) | `src/cardio/data/loader.py` |
 | `src/preprocessing.py` (T08, T09, T11) | `src/cardio/data/preprocessing.py` |
