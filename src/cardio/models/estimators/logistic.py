@@ -20,7 +20,6 @@ from ...data.preprocessing import build_preprocessor
 
 PARAM_GRID = {
     "model__C": [0.01, 0.1, 1, 10],
-    "model__penalty": ["l2"],
     "model__class_weight": [None, "balanced"],
 }
 
