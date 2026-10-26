@@ -10,7 +10,7 @@ Hiperparâmetros padrão (escolhidos com ``tune()``: grid completo com validaç�
 amostra de 10.000 pacientes do treino, escolha pela AUC): os conjuntos A e B escolheram
 ``n_neighbors=101`` e ``weights="uniform"`` (AUC de 0,782 e 0,779). A AUC cresce de forma contínua com
 o ``k`` e o melhor valor está na borda do grid, então um ``k`` ainda maior pode render pouco mais; a
-diferença para ``k=51`` é pequena (cerca de 0,002 de AUC), por isso o grid não foi estendido.
+diferença para ``k=51`` é pequena (cerca de 0,003 de AUC), por isso o grid não foi estendido.
 
 O KNN não aprende parâmetros: o ``fit`` só guarda o treino, e o custo está na predição, que compara
 cada paciente com todos os do treino. Por isso é o modelo mais lento para prever.

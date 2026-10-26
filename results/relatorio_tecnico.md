@@ -76,7 +76,7 @@ bem maiores que o padrão.
 **Hiperparâmetros.** Grid completo (`n_neighbors` em 15, 31, 51 e 101; `weights` uniforme ou por distância)
 com validação cruzada de 5 folds numa amostra de 10.000 pacientes do treino, escolhendo pela AUC. Os
 conjuntos A e B escolheram `n_neighbors = 101` e `weights = "uniform"` (AUC de 0,782 e 0,779 na CV). O
-melhor valor está na borda do grid, mas a diferença para `k = 51` é de cerca de 0,002 de AUC.
+melhor valor está na borda do grid, mas a diferença para `k = 51` é de cerca de 0,003 de AUC.
 
 **Resultados na validação** (o teste não foi usado).
 
