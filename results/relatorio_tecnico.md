@@ -8,6 +8,110 @@
 ## 2. Dataset
 ## 3. Exploração de dados
 ## 4. Estratégias de pré-processamento
+
+O pré-processamento transforma o arquivo bruto (70.000 pacientes) em dados prontos para os modelos. Ele tem
+quatro etapas: limpeza dos registros impossíveis, conversão e criação de variáveis, divisão em treino,
+validação e teste, e preparação das variáveis dentro do pipeline de cada modelo. Todas usam as mesmas
+funções do código (`clean()`, `load_splits()` e `build_preprocessor()`), então os cinco integrantes treinaram
+os modelos sobre exatamente os mesmos dados.
+
+### 4.1 Limpeza: registros impossíveis e duplicados (T08)
+
+O dataset não tem valores ausentes, mas tem **valores fisiologicamente impossíveis**, típicos de erro de
+digitação: pressão sistólica de −150 ou 16.020 mmHg, diastólica de 11.000 mmHg, adultos com 55 cm de altura
+ou 10 kg de peso. Esses registros foram **removidos**, e não corrigidos: na maioria dos casos não há como
+saber qual era o valor certo (um "1100" pode ser 110 ou 100), e corrigir por suposição colocaria no modelo
+dados inventados. As faixas aceitas foram definidas nas análises exploratórias (T04 e T05):
+
+| Regra (aplicada em sequência) | Faixa aceita | Justificativa clínica | Linhas removidas |
+|---|---|---|---|
+| Duplicados | — | Mesmo paciente registrado duas vezes (todas as colunas iguais, exceto o `id`) | 24 |
+| Pressão sistólica | 70 a 250 mmHg | Abaixo de 70 indica choque circulatório; acima de 250 é extremamente raro e, aqui, eram erros de digitação | 229 |
+| Pressão diastólica | 40 a 200 mmHg | Fora disso são valores digitados com zeros a mais ou negativos | 997 |
+| Diastólica < sistólica | — | A pressão "de baixo" nunca é maior ou igual à "de cima" | 103 |
+| Altura | 130 a 210 cm | Adultos fora dessa faixa são raríssimos; os casos encontrados eram erros | 89 |
+| Peso | 35 a 200 kg | Abaixo de 35 kg é incompatível com adultos dessas alturas | 16 |
+| IMC | 15 a 60 kg/m² | Pega combinações de altura e peso impossíveis que passam nas regras anteriores | 33 |
+| **Total** | | | **1.491 (2,1%)** |
+
+As regras são aplicadas uma após a outra, e cada linha da tabela conta só os registros que aquela regra
+removeu, por isso a soma bate com o total. Os **24 duplicados** (registros com todas as informações iguais,
+mudando só o número de identificação) foram removidos primeiro, para que o mesmo paciente não apareça ao
+mesmo tempo no treino e no teste, o que inflaria artificialmente o resultado.
+
+Depois da limpeza ficam **68.509 pacientes**. A proporção de doentes praticamente não muda (de 49,97% para
+49,49%), o que mostra que os registros removidos estavam espalhados entre os dois grupos e a limpeza não
+desequilibrou as classes. As faixas ficam centralizadas no código (`config.py`), e testes automatizados
+confirmam que nenhum valor fora delas sobra depois da limpeza.
+
+### 4.2 Conversões e variáveis derivadas (T02 e T10)
+
+Duas colunas mudam de formato: a **idade**, que vem em dias no arquivo original, é convertida para anos, e o
+**sexo** (1 = mulher, 2 = homem) vira uma variável `sex_male` (1 = homem, 0 = mulher), mais fácil de
+interpretar. O identificador do paciente nunca é usado como variável.
+
+Além das variáveis originais, foram criadas cinco **variáveis derivadas** com significado clínico. Elas são
+calculadas só a partir das próprias medidas do paciente, nunca a partir do diagnóstico, por isso não "entregam
+a resposta" ao modelo:
+
+| Variável | Como é calculada | Por que pode ajudar |
+|---|---|---|
+| IMC | peso ÷ altura² | Resume peso e altura num único indicador de excesso de peso, fator de risco conhecido |
+| Pressão de pulso | sistólica − diastólica | Diferença alta indica rigidez das artérias, comum no envelhecimento vascular |
+| Pressão arterial média (PAM) | (sistólica + 2 × diastólica) ÷ 3 | Representa a pressão com que o sangue chega aos órgãos |
+| Categoria de pressão | Normal, elevada, hipertensão 1 ou 2 (diretriz ACC/AHA 2017) | Traduz os números na classificação usada na prática médica |
+| Faixa de IMC | Abaixo do peso, normal, sobrepeso ou obesidade (OMS) | Idem, para o peso |
+
+Com isso, cada modelo foi treinado com dois **conjuntos de variáveis**: o **A**, com as 11 variáveis originais
+já limpas (idade, sexo, altura, peso, pressões, colesterol, glicose, fumo, álcool e atividade física), e o **B**,
+com o A mais as 5 derivadas. Comparar os dois mostra se a engenharia de variáveis traz ganho real. Nos
+resultados (seção 5), a diferença entre A e B ficou abaixo de 0,01 de AUC em todos os modelos: as derivadas
+são combinações das variáveis originais, que os modelos já conseguem aproveitar sozinhos.
+
+### 4.3 Divisão em treino, validação e teste (T09)
+
+Os 68.509 pacientes foram divididos uma única vez, com sorteio fixo (semente 42), em três grupos:
+
+| Conjunto | Pacientes | Proporção | Uso |
+|---|---|---|---|
+| Treino | 47.955 | 70% | Os modelos aprendem com esses pacientes |
+| Validação | 10.277 | 15% | Comparar modelos, escolher hiperparâmetros e o limiar de decisão |
+| Teste | 10.277 | 15% | Avaliação final, **usado uma única vez** |
+
+A divisão é **estratificada**: os três grupos têm a mesma proporção de doentes (49,5%), então nenhum fica
+mais "fácil" que outro. Ela é sempre a mesma, para todos os integrantes e em qualquer computador, e o grupo de
+cada paciente fica registrado em `results/split_ids.csv`.
+
+O **teste só é usado no final** (T23) porque é o único grupo que simula pacientes nunca vistos. Se fosse
+usado para escolher o modelo ou ajustar parâmetros, o resultado final ficaria otimista demais, como um aluno
+que estuda com as questões da própria prova. Por isso, todas as escolhas (hiperparâmetros, conjunto de
+variáveis e limiar) foram feitas com o treino e a validação. A busca de hiperparâmetros usou, além disso,
+**validação cruzada de 5 partes dentro do treino**: o treino é dividido em 5 pedaços, e cada combinação é
+testada 5 vezes, cada vez deixando um pedaço de fora, o que dá uma estimativa mais estável.
+
+### 4.4 Preparação das variáveis dentro do pipeline (T11)
+
+Antes de chegar ao algoritmo, cada tipo de variável recebe um tratamento:
+
+- **Contínuas** (idade, altura, peso, pressões, IMC, pressão de pulso e PAM): são **padronizadas**, isto é,
+  colocadas na mesma escala (média 0 e desvio-padrão 1). Sem isso, modelos baseados em distância ou em
+  coeficientes, como KNN e Regressão Logística, dariam mais peso ao peso em kg ou à pressão em mmHg só porque
+  os números são maiores. Os modelos de árvore (Random Forest e XGBoost) não precisam disso e recebem os
+  valores originais.
+- **Ordinais** (colesterol e glicose, em 3 níveis): mantidas como 1, 2 e 3, porque a ordem tem significado
+  ("muito acima" é mais que "acima").
+- **Binárias** (sexo, fumo, álcool e atividade física): mantidas como 0 e 1.
+- **Categorias do conjunto B** (categoria de pressão e faixa de IMC): transformadas em uma coluna de sim/não
+  para cada categoria (*one-hot encoding*), porque não são números. Com isso, o conjunto B passa de 16 para
+  22 colunas.
+
+Esse tratamento fica **dentro do pipeline de cada modelo**, e não é aplicado na base inteira antes da divisão.
+O motivo é evitar o **vazamento de informação**: a padronização usa a média e o desvio-padrão dos dados, e,
+se esses valores fossem calculados com todos os pacientes, informações da validação e do teste "vazariam"
+para o treino. Dentro do pipeline, eles são calculados só com o treino (e, na validação cruzada, só com o
+pedaço de treino de cada rodada) e depois apenas aplicados aos demais pacientes, exatamente como aconteceria
+com um paciente novo no hospital.
+
 ## 5. Modelos usados e por quê
 
 
