@@ -64,6 +64,31 @@ pulso, PAM e as categorias) **não melhoraram** o modelo: a diferença é de 0,0
 esperado, porque as árvores já combinam as variáveis originais. Na validação, o XGBoost ficou praticamente
 empatado com o Random Forest (AUC 0,791) e um pouco acima da Regressão Logística (0,783 a 0,785).
 
+### KNN (T16)
+
+O KNN (*k-nearest neighbors*) classifica cada paciente pela maioria entre os `k` pacientes mais parecidos
+do treino, o que é fácil de explicar a um médico ("pacientes parecidos tiveram o mesmo desfecho"). Foi
+escolhido como modelo baseado em distância, diferente das árvores e da regressão logística. Como depende
+de distâncias, as variáveis contínuas são escalonadas; e, como o dataset é ruidoso, foram testados `k`
+bem maiores que o padrão.
+
+**Hiperparâmetros.** Grid completo (`n_neighbors` em 15, 31, 51 e 101; `weights` uniforme ou por distância)
+com validação cruzada de 5 folds numa amostra de 10.000 pacientes do treino, escolhendo pela AUC. Os
+conjuntos A e B escolheram `n_neighbors = 101` e `weights = "uniform"` (AUC de 0,782 e 0,779 na CV). O
+melhor valor está na borda do grid, mas a diferença para `k = 51` é de cerca de 0,002 de AUC.
+
+**Resultados na validação** (o teste não foi usado).
+
+| Conjunto | Acurácia | Precision | Recall | F1-score | AUC ROC |
+|---|---|---|---|---|---|
+| A (variáveis originais) | 72,49% | 75,34% | 66,02% | 70,38% | 78,53% |
+| B (com variáveis derivadas) | 72,40% | 75,33% | 65,79% | 70,24% | 78,62% |
+
+O KNN ficou ligeiramente abaixo do XGBoost (AUC 0,792) e próximo da Regressão Logística (0,783 a 0,785);
+as variáveis derivadas do conjunto B não ajudaram. O "treino" leva cerca de 0,1 s (só guarda os dados),
+mas a predição na validação (10.277 pacientes) leva cerca de 1,2 a 1,4 s, porque cada paciente é comparado
+com todos os do treino: é o modelo mais lento para prever.
+
 ## 6. Resultados
 ## 7. Interpretação (feature importance / SHAP)
 ## 8. Discussão crítica (uso na prática — o médico tem a palavra final)
