@@ -1,11 +1,19 @@
+# Não entram na imagem (deixam o build mais rápido e a imagem menor)
 .git
+.github
+.vscode
+.idea
 .venv
 venv
-__pycache__
-*.pyc
-.ipynb_checkpoints
+.env
+**/__pycache__
+**/*.pyc
+**/.ipynb_checkpoints
 .pytest_cache
 .ruff_cache
+*.egg-info
+
+# Artefatos gerados: são recriados ao rodar o container
 models/*.joblib
 results/figures/*.png
 data/processed/*.csv
