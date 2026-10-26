@@ -44,3 +44,9 @@ VAL_SIZE = 0.15
 TEST_SIZE = 0.15
 CV_FOLDS = 5
 SPLIT_IDS_PATH = RESULTS_DIR / "split_ids.csv"
+
+# --- Ajuste do limiar de decisão (T22) ---
+# Regra: o maior limiar que mantém o recall na validação >= THRESHOLD_MIN_RECALL.
+THRESHOLD_MIN_RECALL = 0.80
+THRESHOLD_GRID = (0.10, 0.90, 0.01)  # início, fim e passo dos limiares testados
+THRESHOLDS_PATH = RESULTS_DIR / "thresholds.csv"
