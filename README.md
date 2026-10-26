@@ -41,6 +41,7 @@ notebooks/
   08_eda_correlacao.ipynb        # T07: correlação, multicolinearidade, checagem de vazamento e relações não lineares
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
+  pipeline.py                    # pipeline final (T27): modelo final + avaliação no teste (comando padrão do Docker)
   data/
     loader.py                    # leitura + validação das colunas, conversão de idade e sexo
     preprocessing.py             # limpeza (clean), split 70/15/15 (load_splits), get_cv e build_preprocessor (T11)
@@ -99,7 +100,8 @@ A imagem usa `python:3.11-slim` e instala as versões fixadas do `requirements.t
 docker build -t cardio-classifier .
 ```
 
-**Treinar e avaliar** (padrão: Regressão Logística, conjunto A, avaliada na validação). Para os resultados
+**Rodar o pipeline final** (comando padrão): treina o modelo escolhido na T23 (XGBoost, conjunto A) com
+treino + validação, aplica o limiar da T22 (0,36) e avalia **uma única vez** no teste. Para os resultados
 aparecerem na sua máquina, monte as pastas `results/` e `models/`:
 
 ```powershell
@@ -112,8 +114,11 @@ docker run --rm -v "${PWD}/results:/app/results" -v "${PWD}/models:/app/models" 
 docker run --rm -v "$(pwd)/results:/app/results" -v "$(pwd)/models:/app/models" cardio-classifier
 ```
 
-Saída: `models/logistic_A.joblib` e uma linha nova em `results/val_results.csv`. Para outro modelo ou conjunto,
-acrescente o comando no fim:
+Saída: `models/final_model.joblib` (modelo + limiar) e `results/test_results.csv` (accuracy, AUC, recall,
+precision, F1, especificidade e impacto a cada 1.000 pacientes). O pipeline leva cerca de 30 segundos, quase
+tudo para carregar as bibliotecas (o build da imagem, só na primeira vez, leva alguns minutos).
+
+**Treinar outro modelo** e avaliá-lo na validação (acrescente o comando no fim):
 
 ```bash
 docker run --rm -v "${PWD}/results:/app/results" -v "${PWD}/models:/app/models" cardio-classifier \
@@ -141,7 +146,8 @@ Monta a pasta inteira do projeto como volume, então alterações no código val
 ```bash
 docker compose build                  # constrói a imagem (repetir só quando o requirements.txt mudar)
 docker compose up jupyter             # Jupyter em http://localhost:8888 (Ctrl + C para parar)
-docker compose run --rm train         # treina o Random Forest (conjunto A) -> models/random_forest_A.joblib
+docker compose run --rm pipeline      # pipeline final: modelo final + avaliação no teste
+docker compose run --rm train         # treina o Random Forest (conjunto A) na validação -> models/random_forest_A.joblib
 docker compose run --rm tests         # roda os testes
 docker compose up api app             # API (http://localhost:8000/docs) e demo (http://localhost:8501)
 ```
