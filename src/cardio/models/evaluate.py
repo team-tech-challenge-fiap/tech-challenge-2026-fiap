@@ -20,17 +20,19 @@ import re
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import (
     accuracy_score,
+    confusion_matrix,
     f1_score,
     precision_score,
     recall_score,
     roc_auc_score,
 )
 
-from ..config import FIGURES_DIR, SEED, VAL_RESULTS_PATH
+from ..config import FIGURES_DIR, SEED, THRESHOLD_GRID, THRESHOLD_MIN_RECALL, VAL_RESULTS_PATH
 from ..data.preprocessing import load_splits
 from ..visualization.plots import plot_confusion_matrix
 
@@ -134,3 +136,85 @@ def summary_table(path: Path = VAL_RESULTS_PATH, include_baseline: bool = True) 
     if include_baseline:
         tabela = pd.concat([tabela, pd.DataFrame([baseline_results()])[colunas]], ignore_index=True)
     return tabela.sort_values("auc_roc", ascending=False).reset_index(drop=True)
+
+
+# --- Ajuste do limiar de decisão (T22) ---------------------------------------------------------
+# Num sistema de apoio à triagem, o falso negativo (doente não sinalizado) é o erro mais grave.
+# Baixar o limiar abaixo de 0,5 aumenta o recall, ao custo de mais falsos positivos.
+# Regra: o MAIOR limiar que mantém o recall >= THRESHOLD_MIN_RECALL (0,80) na VALIDAÇÃO, ou seja,
+# sinaliza pelo menos 8 em cada 10 doentes com o menor número possível de alarmes falsos.
+# Nunca use o teste para escolher o limiar: ele é escolhido na validação e só aplicado no teste (T23).
+
+
+def threshold_curve(y_true, probabilities, thresholds=None) -> pd.DataFrame:
+    """Métricas de classificação para cada limiar de decisão (T22).
+
+    Args:
+        y_true: alvo real (0 = sem doença, 1 = doença), da **validação**.
+        probabilities: ``predict_proba(X)[:, 1]`` do modelo, nas mesmas linhas de ``y_true``.
+        thresholds: limiares a testar. Padrão: de 0,10 a 0,90 de 0,01 em 0,01 (``config.THRESHOLD_GRID``).
+
+    Returns:
+        DataFrame com uma linha por limiar: ``limiar``, ``recall``, ``precision``, ``f1``,
+        ``especificidade`` e o impacto por 1.000 pacientes (``doentes_nao_sinalizados_por_1000`` e
+        ``saudaveis_encaminhados_por_1000``).
+    """
+    if thresholds is None:
+        inicio, fim, passo = THRESHOLD_GRID
+        thresholds = np.round(np.arange(inicio, fim + passo / 2, passo), 2)
+    y_true = np.asarray(y_true)
+    probabilities = np.asarray(probabilities)
+    linhas = [{"limiar": float(limiar), **_metricas_no_limiar(y_true, probabilities, limiar)}
+              for limiar in thresholds]
+    return pd.DataFrame(linhas)
+
+
+def choose_threshold(y_true, probabilities, min_recall: float = THRESHOLD_MIN_RECALL, thresholds=None) -> float:
+    """Escolhe o limiar de decisão: o **maior** limiar com recall >= ``min_recall`` na validação (T22).
+
+    Entre os limiares que sinalizam pelo menos ``min_recall`` dos doentes, o maior é o que gera menos
+    falsos positivos (encaminhamentos desnecessários).
+
+    Args:
+        y_true: alvo real da **validação** (nunca do teste).
+        probabilities: ``predict_proba(X_val)[:, 1]`` do modelo.
+        min_recall: recall mínimo exigido (padrão: ``config.THRESHOLD_MIN_RECALL`` = 0,80).
+        thresholds: limiares candidatos (padrão: ``config.THRESHOLD_GRID``).
+
+    Returns:
+        O limiar escolhido, para usar como ``(proba >= limiar).astype(int)``.
+
+    Raises:
+        ValueError: se nenhum limiar candidato atingir o recall mínimo.
+    """
+    curva = threshold_curve(y_true, probabilities, thresholds)
+    candidatos = curva[curva["recall"] >= min_recall]
+    if candidatos.empty:
+        raise ValueError(f"Nenhum limiar atinge recall >= {min_recall}; use limiares menores.")
+    return float(candidatos["limiar"].max())
+
+
+def impact_per_1000(y_true, probabilities, threshold: float) -> dict[str, float]:
+    """Impacto de um limiar em números concretos, a cada 1.000 pacientes avaliados (T22).
+
+    Returns:
+        Dicionário com ``limiar``, ``recall``, ``precision``, ``f1``, ``especificidade``,
+        ``doentes_nao_sinalizados_por_1000`` (falsos negativos) e
+        ``saudaveis_encaminhados_por_1000`` (falsos positivos).
+    """
+    return {"limiar": float(threshold),
+            **_metricas_no_limiar(np.asarray(y_true), np.asarray(probabilities), threshold)}
+
+
+def _metricas_no_limiar(y_true: np.ndarray, probabilities: np.ndarray, limiar: float) -> dict[str, float]:
+    previsto = (probabilities >= limiar).astype(int)
+    vn, fp, fn, vp = confusion_matrix(y_true, previsto, labels=[0, 1]).ravel()
+    total = len(y_true)
+    return {
+        "recall": float(recall_score(y_true, previsto, zero_division=0)),
+        "precision": float(precision_score(y_true, previsto, zero_division=0)),
+        "f1": float(f1_score(y_true, previsto, zero_division=0)),
+        "especificidade": float(vn / (vn + fp)) if (vn + fp) else 0.0,
+        "doentes_nao_sinalizados_por_1000": float(fn / total * 1000),
+        "saudaveis_encaminhados_por_1000": float(fp / total * 1000),
+    }

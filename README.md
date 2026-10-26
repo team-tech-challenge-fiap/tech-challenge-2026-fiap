@@ -37,6 +37,7 @@ notebooks/
   04_eda_exames_habitos.ipynb    # T06: colesterol, glicose e hábitos de vida
   05_feature_engineering.ipynb   # T10: variáveis derivadas e conjuntos A e B
   06_modelo_regressao_logistica.ipynb  # T15: regressão logística (baseline) e odds ratio
+  07_ajuste_limiar.ipynb         # T22: ajuste do limiar de decisão (recall >= 0,80) e impacto por 1.000 pacientes
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   data/
