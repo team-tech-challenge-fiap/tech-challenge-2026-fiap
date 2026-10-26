@@ -47,7 +47,7 @@ src/cardio/
     estimators/                  # um arquivo por modelo: build_model() + PARAM_GRID (T13, T15–T19)
     tuning.py                    # T14: tune() = busca de hiperparâmetros com CV no treino
     train.py                     # CLI de treino: --modelo, --features, --sample (T13)
-    evaluate.py                  # métricas
+    evaluate.py                  # T20: evaluate(), matriz de confusão, summary_table() e baseline
     predict.py                   # predição com modelo salvo
     explain.py                   # TODO: feature importance / SHAP
   visualization/
