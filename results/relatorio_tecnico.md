@@ -5,8 +5,83 @@
 **Vídeo:**
 
 ## 1. Problema
+
+As doenças cardiovasculares são a principal causa de morte no mundo, segundo a Organização Mundial da
+Saúde. Muitos casos só são descobertos quando já há sintomas graves, porque o diagnóstico depende de exames
+que nem sempre estão ao alcance de todos os pacientes.
+
+Este projeto constrói um modelo de **triagem**: a partir de dados simples, que qualquer consulta de rotina
+coleta (idade, sexo, altura, peso, pressão arterial, colesterol, glicose e hábitos de vida), ele estima se o
+paciente tem doença cardiovascular. O objetivo não é diagnosticar, e sim **priorizar** quais pacientes devem
+fazer exames mais completos primeiro. Por isso o erro mais grave é o falso negativo (um doente classificado
+como saudável), e o **recall** é a métrica mais importante, acompanhado de precision, F1 e AUC. O médico
+mantém a decisão final.
+
 ## 2. Dataset
+
+Os dados são do *Cardiovascular Disease Dataset*, do Kaggle
+(<https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset>): **70.000 pacientes** e 13
+colunas (arquivo `data/raw/cardio_train.csv`, separador `;`). O `id` é só um identificador e `cardio` é o
+alvo (1 = doença cardiovascular), o que deixa **11 variáveis** para o modelo, de três tipos:
+
+| Tipo | Variáveis | Observação |
+|---|---|---|
+| **Objetivas** | idade, sexo, altura, peso | medidas ou registradas pela clínica; a idade vem em dias e é convertida para anos |
+| **De exame** | pressão sistólica e diastólica, colesterol, glicose | pressão em mmHg; colesterol e glicose em 3 níveis (normal, acima, muito acima) |
+| **Subjetivas** | fumo, álcool, atividade física | **autodeclaradas** (sim/não), logo menos confiáveis |
+
+O alvo é **balanceado**: 35.021 pacientes sem doença e 34.979 com doença (≈ 50% / 50%). Por isso a acurácia
+também é informativa e não foi preciso reamostrar. Os pacientes têm de 29,6 a 64,9 anos, e 65% são mulheres.
+Não há valores ausentes. O principal problema do dataset é a **qualidade dos registros** (seção 3).
+
 ## 3. Exploração de dados
+
+Os detalhes ficam nos notebooks `01_eda_visao_geral.ipynb` (T03), `02_eda_demografia_imc.ipynb` (T04),
+`03_eda_pressao_arterial.ipynb` (T05), `04_eda_exames_habitos.ipynb` (T06) e `08_eda_correlacao.ipynb`
+(T07); as figuras estão em `results/figures/`.
+
+### 3.1 Problemas de qualidade
+
+- **Duplicados:** 24 linhas idênticas se ignorarmos o `id` (48 registros). Mantê-las colocaria o mesmo
+  paciente no treino e na validação, inflando o resultado.
+- **Pressão arterial impossível:** a sistólica vai de −150 a 16.020 mmHg e a diastólica de −70 a 11.000, e
+  há pacientes com diastólica maior ou igual à sistólica.
+- **Altura e peso fora da realidade:** altura de 55 a 250 cm e peso a partir de 10 kg, além de combinações
+  que dão um IMC impossível.
+- **Tratamento (T08):** `clean()` remove os registros com erro, em vez de corrigi-los, usando as faixas
+  plausíveis do `config.py`. O dataset passa de **70.000 para 68.509 linhas** (1.491 removidas, 2,1%), e a
+  taxa de doença quase não muda (≈ 50%), então a limpeza não enviesa o alvo.
+  Figuras: `t03_alvo.png`, `t03_faixas.png` e `t03_limpeza.png`.
+
+### 3.2 O que se relaciona com a doença
+
+Os números abaixo são sobre os 68.509 pacientes limpos; a taxa de doença é a proporção com `cardio = 1`.
+As correlações são de Pearson, como na T07. Figuras: `t07_ranking_alvo.png` (correlação de cada variável com a
+doença), `t07_taxa_por_faixa.png` (taxa de doença por faixa de idade e de pressão, que mostra a forma da relação)
+e `t06_colesterol_glicose.png` (colesterol e glicose).
+
+| Fator | Achado |
+|---|---|
+| **Pressão arterial** (o fator mais forte) | Sistólica e diastólica são as variáveis mais correlacionadas com o alvo (correlação de Pearson de 0,43 e 0,34). Pela classificação ACC/AHA, a taxa de doença é de 22% com pressão normal, 32% na elevada, 39% na hipertensão 1 e **78% na hipertensão 2**. |
+| **Idade** | A doença cresce de forma contínua com a idade: 24% até 40 anos, 43% entre 45 e 50, 56% entre 55 e 60 e **67% depois dos 60** (correlação de 0,24). |
+| **Colesterol** | 44% de doença com colesterol normal, 60% acima do normal e **76% muito acima** (correlação de 0,22). A glicose segue o mesmo sentido, mais fraca: 48%, 59% e 62% (0,09). |
+| **Peso e IMC** | A taxa é de 27% abaixo do peso, 40% no peso normal, 51% no sobrepeso e **63% na obesidade** (correlação do IMC de 0,19). A altura isoladamente não tem relação (−0,01). |
+| **Sexo** | Praticamente nenhuma: 49% das mulheres e 50% dos homens têm doença (correlação de 0,01). Vale a pena lembrar que 65% da amostra são mulheres. |
+| **Hábitos** | Efeito fraco e, no fumo e no álcool, **contrário ao esperado**: 47% de doença entre fumantes contra 50% entre não fumantes. Quem faz atividade física tem 49% contra 53% de quem não faz. |
+
+### 3.3 Cuidados com a interpretação
+
+- **Hábitos autodeclarados não são confiáveis.** O resultado "fumar protege o coração" não indica que fumar
+  faça bem: o sinal vem de como a variável foi coletada (subnotificação, quem parou de fumar depois do
+  diagnóstico e uma medida só de sim/não). A T06 testou o efeito de sexo e idade e ele explica só uma parte (figuras `t06_habitos.png` e
+  `t06_fumo_estratificado.png`).
+  Essas variáveis ficam no modelo pelo valor preditivo, mas o efeito delas **não deve ser lido como causal**.
+- **Nenhuma variável isolada separa os grupos:** mesmo a pressão, a mais forte, deixa 22% de doentes entre
+  quem tem pressão normal. Isso explica o teto de desempenho dos modelos (acurácia em torno de 73%, AUC em
+  torno de 0,79) e é discutido na análise de erros (T26).
+- **Não há vazamento de dados (T07):** o `id` não tem relação com a doença (correlação de 0,004 e AUC de 0,50
+  usando só o `id`) e fica fora das variáveis do modelo, e nenhuma variável é consequência direta do
+  diagnóstico. A falta de informação sobre o tratamento do paciente é uma limitação do dataset, e não vazamento.
 ## 4. Estratégias de pré-processamento
 
 O pré-processamento transforma o arquivo bruto (70.000 pacientes) em dados prontos para os modelos. Ele tem
