@@ -4,7 +4,7 @@ import pytest
 from sklearn.pipeline import Pipeline
 
 from cardio.data.preprocessing import load_splits
-from cardio.models.estimators import example, logistic
+from cardio.models.estimators import example, logistic, xgb
 from cardio.models.tuning import SCORING, TuningResult, tune
 
 
@@ -36,6 +36,14 @@ def test_tune_com_sample_size_busca_na_amostra_e_treina_no_treino_completo(trein
     assert resultado.n_search == 400
     # o melhor modelo foi re-treinado com todos os pacientes, não só com a amostra
     assert resultado.best_model.named_steps["prep"].named_transformers_["num"].n_samples_seen_ == len(X)
+    assert resultado.best_model.predict(X.head(5)).shape == (5,)
+
+
+def test_tune_roda_com_o_grid_do_xgboost(treino) -> None:
+    X, y = treino
+    resultado = tune(xgb.build_model(X), xgb.PARAM_GRID, X, y, n_iter=2, sample_size=500, n_jobs=1,
+                     verbose=False)
+    assert set(resultado.best_params) == set(xgb.PARAM_GRID)
     assert resultado.best_model.predict(X.head(5)).shape == (5,)
 
 
