@@ -38,6 +38,7 @@ redução significativa do overfitting observado inicialmente.
 
 **Pendências.** Comparar com o conjunto de features B (T10) e rodar a busca de hiperparâmetros (T14).
 Os resultados apresentados são preliminares.
+
 ### XGBoost (T18)
 
 O XGBoost é um conjunto de árvores de decisão construídas em sequência, em que cada árvore nova corrige
@@ -48,7 +49,7 @@ para cada paciente. Como pode decorar o ruído do dataset, foi usado com árvore
 **Hiperparâmetros.** Foram sorteadas 20 combinações do grid com validação cruzada de 5 folds **só no
 treino** (47.955 pacientes), escolhendo pela AUC. Os conjuntos A e B escolheram a mesma combinação:
 `n_estimators = 200`, `max_depth = 4`, `learning_rate = 0,03`, `subsample = 0,8` e `colsample_bytree = 0,8`
-(AUC de 0,801 na validação cruzada). As 8 melhores combinações ficaram entre 0,8005 e 0,8012, então o
+(AUC de 0,801 na validação cruzada). As 8 melhores combinações ficaram entre 0,8005 e 0,8014, então o
 resultado é estável.
 
 **Resultados na validação** (o teste não foi usado).
