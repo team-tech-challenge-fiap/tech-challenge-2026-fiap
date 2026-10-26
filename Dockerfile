@@ -22,8 +22,8 @@ COPY . .
 
 EXPOSE 8888 8000 8501
 
-# Padrão: treina e avalia (na validação) o baseline, a Regressão Logística no conjunto A, e grava
-# models/logistic_A.joblib e uma linha em results/val_results.csv.
-# Para outro modelo: docker run cardio-classifier python -m cardio.models.train --modelo random_forest --features B
-# TODO (T23/T29): trocar pelo pipeline final (todos os modelos + avaliação no teste) quando existir.
-CMD ["python", "-m", "cardio.models.train", "--modelo", "logistic", "--features", "A"]
+# Padrão: pipeline final (T23/T27). Treina o modelo final (XGBoost, conjunto A) com treino + validação,
+# salva models/final_model.joblib com o limiar da T22 e avalia uma única vez no teste -> results/test_results.csv.
+# Para treinar outro modelo na validação:
+#   docker run cardio-classifier python -m cardio.models.train --modelo random_forest --features B
+CMD ["python", "-m", "cardio.pipeline"]
