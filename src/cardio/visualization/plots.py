@@ -11,7 +11,71 @@ matplotlib.use("Agg")  # só salva arquivos; evita abrir janela (testes, Docker,
 import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay
 
+from sklearn.calibration import calibration_curve
+from sklearn.metrics import average_precision_score, precision_recall_curve, roc_auc_score, roc_curve
+
 CLASS_LABELS = ["Sem doença", "Doença cardiovascular"]
+
+
+def _salvar(fig, path: Path) -> Path:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def plot_roc_curves(probabilities: dict, y_true, path: Path, title: str = "Curvas ROC (validação)") -> Path:
+    """Curvas ROC de vários modelos no mesmo gráfico, com a AUC na legenda e a diagonal do acaso.
+
+    Args:
+        probabilities: ``{nome: probabilidade da classe 1}``, calculadas na **validação**.
+        y_true: alvo real.
+        path: arquivo ``.png`` de saída.
+        title: título do gráfico.
+    """
+    fig, ax = plt.subplots(figsize=(7, 6))
+    for nome, proba in probabilities.items():
+        fpr, tpr, _ = roc_curve(y_true, proba)
+        ax.plot(fpr, tpr, label=f"{nome} (AUC = {roc_auc_score(y_true, proba):.3f})")
+    ax.plot([0, 1], [0, 1], "k--", label="Baseline / acaso (AUC = 0,500)")
+    ax.set(title=title, xlabel="Taxa de falsos positivos (1 − especificidade)",
+           ylabel="Taxa de verdadeiros positivos (recall)")
+    ax.legend(loc="lower right")
+    return _salvar(fig, path)
+
+
+def plot_pr_curves(probabilities: dict, y_true, path: Path,
+                   title: str = "Curvas Precision-Recall (validação)") -> Path:
+    """Curvas Precision-Recall de vários modelos, com a AP (área sob a curva) na legenda.
+
+    A linha tracejada é o baseline: um modelo sem poder de previsão tem precision igual à
+    prevalência da doença (~50%) em qualquer recall.
+    """
+    fig, ax = plt.subplots(figsize=(7, 6))
+    for nome, proba in probabilities.items():
+        precision, recall, _ = precision_recall_curve(y_true, proba)
+        ax.plot(recall, precision, label=f"{nome} (AP = {average_precision_score(y_true, proba):.3f})")
+    ax.axhline(float(y_true.mean()), color="k", linestyle="--", label="Baseline / acaso")
+    ax.set(title=title, xlabel="Recall", ylabel="Precision")
+    ax.legend(loc="lower left")
+    return _salvar(fig, path)
+
+
+def plot_calibration(proba, y_true, path: Path, name: str, n_bins: int = 10) -> Path:
+    """Curva de calibração: a probabilidade prevista bate com a frequência real de doença?
+
+    Pontos sobre a diagonal indicam um modelo calibrado; abaixo dela, o modelo exagera o risco.
+    """
+    fig, ax = plt.subplots(figsize=(6, 6))
+    fracao_real, media_prevista = calibration_curve(y_true, proba, n_bins=n_bins)
+    ax.plot([0, 1], [0, 1], "k:", label="Calibração perfeita")
+    ax.plot(media_prevista, fracao_real, "s-", label=name)
+    ax.legend(loc="lower right")
+    ax.set(title=f"Calibração — {name} (validação)", xlabel="Probabilidade prevista",
+           ylabel="Fração real de pacientes com doença")
+    return _salvar(fig, path)
 
 
 def plot_confusion_matrix(y_true, y_pred, path: Path, title: str) -> Path:
