@@ -129,6 +129,7 @@ docker run --rm -p 8888:8888 -v "${PWD}:/app" cardio-classifier jupyter lab --ip
 
 ```bash
 docker run --rm cardio-classifier pytest -q
+docker run --rm cardio-classifier pytest tests/test_data.py -q   # só qualidade dos dados e vazamento (T12)
 ```
 
 ### Opção 2: `docker compose` (dia a dia do time)
@@ -159,7 +160,12 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 python -m cardio.models.train --modelo random_forest --features A   # ou: cardio-train --modelo ...
 pytest
+pytest tests/test_data.py   # só qualidade dos dados e vazamento (T12)
 ```
+
+`tests/test_data.py` (T12) garante que `id` e `cardio` nunca entram nas features, que a limpeza não deixa
+valores fora das faixas, que treino, validação e teste não têm pacientes em comum, que o split é
+reprodutível e estratificado e que o pré-processador é ajustado só no treino.
 
 O treino usa `load_splits()` (70/15/15), avalia na **validação**, salva `models/<modelo>_<A|B>.joblib` e
 acrescenta uma linha em `results/val_results.csv`. `--modelo` é o nome de um arquivo em
