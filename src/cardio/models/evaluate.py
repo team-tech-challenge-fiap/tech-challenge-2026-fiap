@@ -12,7 +12,7 @@ Por que estas métricas (o problema é uma triagem de doença cardiovascular):
 - **Accuracy**: também é informativa, porque as classes são balanceadas (~50% / 50%). Com o baseline
   em ~50%, ela mostra de imediato o ganho do modelo.
 
-Referência: neste dataset (variáveis simples, e os hábitos são autodeclarados), uma acurácia em
+Referência: neste dataset (pressão e hábitos autodeclarados, sem exames de imagem), uma acurácia em
 torno de **73%** na validação é o esperado; valores muito acima disso merecem desconfiança (vazamento).
 """
 
