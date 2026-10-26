@@ -6,7 +6,7 @@ precisa de profundidade e taxa de aprendizado baixas para não decorar o ruído 
 
 Hiperparâmetros padrão (escolhidos com ``tune()``: 20 candidatos do ``PARAM_GRID`` com validação
 cruzada de 5 folds no treino, escolha pela AUC): os conjuntos A e B escolheram a mesma combinação,
-com AUC de 0,801 nos dois. As 8 melhores combinações ficam entre 0,8005 e 0,8012, e todas usam
+com AUC de 0,801 nos dois. As 8 melhores combinações ficam entre 0,8005 e 0,8014, e todas usam
 ``learning_rate`` baixo e árvores rasas (profundidade 3 a 6), então o resultado é estável.
 
 O arquivo se chama ``xgb.py`` (e não ``xgboost.py``) para não conflitar com a biblioteca.
