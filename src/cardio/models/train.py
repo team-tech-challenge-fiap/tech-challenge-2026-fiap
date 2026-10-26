@@ -7,7 +7,7 @@ O nome do modelo é o de um arquivo em ``cardio.models.estimators``.
 import argparse
 import time
 from importlib import import_module
-
+import json
 import joblib
 import pandas as pd
 from sklearn.metrics import (
@@ -21,6 +21,7 @@ from sklearn.metrics import (
 
 from ..config import MODELS_DIR, SEED, VAL_RESULTS_PATH
 from ..data.preprocessing import load_splits
+from .tuning import tune
 
 
 def main() -> None:
@@ -33,6 +34,26 @@ def main() -> None:
         default=None,
         help="Quantidade de amostras para testes rápidos",
     )
+    parser.add_argument(
+    "--tune",
+    action="store_true",
+    help="Ativa a busca de hiperparâmetros",
+    )
+
+    parser.add_argument(
+    "--n-iter",
+    type=int,
+    default=20,
+    help="Número de combinações na busca",
+    )
+
+    parser.add_argument(
+    "--tune-sample",
+    type=int,
+    default=None,
+    help="Quantidade de registros utilizados na busca",
+    )
+
     args = parser.parse_args()
     args.modelo = args.modelo.lower()
 
@@ -57,11 +78,48 @@ def main() -> None:
 
     modelo = tipo_modelo.build_model(X_train)
 
+    
+    
+    melhores_parametros = None
+    tempo_busca = None
+
     print("Início treinamento.")
     inicio = time.perf_counter()
-    modelo.fit(X_train, y_train)
+
+    if args.tune:
+        if not hasattr(tipo_modelo, "PARAM_GRID") or not tipo_modelo.PARAM_GRID:
+            parser.error(
+                f"O modelo '{args.modelo}' não possui PARAM_GRID para otimização."
+            )
+
+        print("Iniciando busca de hiperparâmetros...")
+
+        resultado_tuning = tune(
+            pipeline=modelo,
+            param_grid=tipo_modelo.PARAM_GRID,
+            X_train=X_train,
+            y_train=y_train,
+            n_iter=args.n_iter,
+            sample_size=args.tune_sample,
+        )
+
+        modelo = resultado_tuning.best_model
+        melhores_parametros = resultado_tuning.best_params
+        tempo_busca = resultado_tuning.search_seconds
+
+        print("Melhores hiperparâmetros:", melhores_parametros)
+        print(f"Tempo da busca: {tempo_busca:.2f} segundos")
+        print(
+            f"Tempo do reajuste: "
+            f"{resultado_tuning.refit_seconds:.2f} segundos"
+        )
+
+    else:
+        modelo.fit(X_train, y_train)
+
     tempo_treinamento = time.perf_counter() - inicio
     print("Fim do treinamento.")
+
 
     acuracia_treino = modelo.score(X_train, y_train)
     print(f"Acurácia no treinamento: {acuracia_treino:.2%}")
@@ -105,7 +163,19 @@ def main() -> None:
         "precision_score": precision,
         "auc_roc": roc,
         "tempo_treinamento": tempo_treinamento,
+        "otimizacao": args.tune,
+        "n_iter": args.n_iter if args.tune else None,
+        "sample_size_busca": (
+            args.tune_sample if args.tune else None
+        ),
+        "tempo_busca_segundos": tempo_busca,
+        "melhores_parametros": (
+            json.dumps(melhores_parametros)
+            if melhores_parametros is not None
+            else None
+        ),
     }])
+
     VAL_RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     resultado.to_csv(
         VAL_RESULTS_PATH,
