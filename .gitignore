@@ -8,6 +8,11 @@ data/processed/*
 models/*
 
 !data/processed/.gitkeep
+
+# Extra de imagens (CNN): as imagens e o zip do Kaggle não vão para o Git (ver README)
+data/images/*
+!data/images/.gitkeep
+data/*.zip
 !models/.gitkeep
 !results/figures/.gitkeep
 
