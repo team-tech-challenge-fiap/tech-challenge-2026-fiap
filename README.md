@@ -235,6 +235,27 @@ cobrem esses campos, e o recomendado é treinar só com a área da grade do tra�
 
 `python -m pip install -e ".[cnn]"` (PyTorch CPU; para GPU, instale o PyTorch com CUDA antes).
 
+### Docker do extra
+
+O extra tem **imagem Docker própria** (`Dockerfile.visual`, com PyTorch CPU) e um compose separado, para não pesar a imagem
+do projeto tabular. As imagens não entram na imagem Docker: o zip fica em `data/archive.zip` e a pasta do projeto é montada
+como volume.
+
+```bash
+docker compose -f docker-compose.visual.yml build
+docker compose -f docker-compose.visual.yml run --rm preparar           # extrai data/archive.zip e reserva o teste cego
+docker compose -f docker-compose.visual.yml run --rm demo               # classifica as 4 imagens do teste cego
+docker compose -f docker-compose.visual.yml run --rm gabarito           # idem, conferindo com o gabarito
+docker compose -f docker-compose.visual.yml run --rm treino             # treina o modelo final e avalia na validação
+docker compose -f docker-compose.visual.yml run --rm validacao-cruzada  # 5 folds sobre treino + validação
+docker compose -f docker-compose.visual.yml run --rm final              # avaliação única no teste
+docker compose -f docker-compose.visual.yml run --rm rapido             # rápido (~1 min): teste cego + avaliação, sem treinar
+docker compose -f docker-compose.visual.yml run --rm completo           # completo (~25 min): preparar, treinar e avaliar
+docker compose -f docker-compose.visual.yml run --rm testes             # testes do extra
+```
+
+Para refazer a extração: `docker compose -f docker-compose.visual.yml run --rm preparar python -m cardio_visual.data.preparar --sobrescrever`.
+
 ## Entregáveis (checklist)
 
 - [x] Estrutura do projeto, Dockerfile e README

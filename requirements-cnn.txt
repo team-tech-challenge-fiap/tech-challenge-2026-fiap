@@ -1,6 +1,14 @@
-# Extra de imagens (CNN). Instale com:  pip install -r requirements-cnn.txt
-# Versão CPU do PyTorch (menor): usa o índice abaixo.
+# Extra de imagens de ECG (src/cardio_visual): usado pelo Dockerfile.visual.
+# Fora do Docker, prefira: python -m pip install -e ".[cnn]"
+# PyTorch na versão CPU (bem menor que a versão com CUDA):
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch>=2.2
-torchvision>=0.17
-pillow>=10
+torch==2.5.1
+torchvision==0.20.1
+pillow==11.0.0
+
+# Mesmas versões do requirements.txt do projeto tabular
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+matplotlib==3.9.2
+pytest==8.3.3
