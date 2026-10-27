@@ -227,6 +227,10 @@ classe** em `data/images/<classe>/`, sem cópias repetidas, e a divisão em trei
 Consequência: a classe `infarto` tem só 30 imagens, então a validação e o teste terão poucas imagens dela e a métrica dessa
 classe é pouco confiável. `data/images/origem.csv` registra de quais arquivos do zip veio cada imagem.
 
+A EDA das imagens (balanceamento, integridade, layout, intensidade, resolução e a decisão entre 4 classes ou binário) está em
+`notebooks/cnn_01_eda_imagens.ipynb`. As imagens trazem o ID do paciente, a data e a frequência cardíaca impressos: as figuras
+cobrem esses campos, e o recomendado é treinar só com a área da grade do traçado.
+
 ### Instalação
 
 `python -m pip install -e ".[cnn]"` (PyTorch CPU; para GPU, instale o PyTorch com CUDA antes).
