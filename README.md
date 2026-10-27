@@ -40,6 +40,7 @@ notebooks/
   07_ajuste_limiar.ipynb         # T22: ajuste do limiar de decisão (recall >= 0,80) e impacto por 1.000 pacientes
   08_eda_correlacao.ipynb        # T07: correlação, multicolinearidade, checagem de vazamento e relações não lineares
   09_shap.ipynb                 # T25: interpretação do modelo final com SHAP (summary, dependence e waterfall)
+  10_analise_erros.ipynb         # T26: análise de erros e desempenho por subgrupo (modelo final, limiar da T22)
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   pipeline.py                    # pipeline final (T27): modelo final + avaliação no teste (comando padrão do Docker)
@@ -78,6 +79,7 @@ As issues foram escritas com uma estrutura simplificada. Os caminhos reais são:
 |---|---|
 | `data/cardio_train.csv` | `data/raw/cardio_train.csv` |
 | `notebooks/05_eda_correlacao.ipynb` (T07) | `notebooks/08_eda_correlacao.ipynb` (o 05 já é a T10) |
+| `notebooks/08_analise_erros.ipynb` (T26) | `notebooks/10_analise_erros.ipynb` (o 08 é a T07 e o 09 a T25) |
 | `src/config.py` | `src/cardio/config.py` |
 | `src/data.py` (T02) | `src/cardio/data/loader.py` |
 | `src/preprocessing.py` (T08, T09, T11) | `src/cardio/data/preprocessing.py` |
