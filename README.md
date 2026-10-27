@@ -39,6 +39,7 @@ notebooks/
   06_modelo_regressao_logistica.ipynb  # T15: regressão logística (baseline) e odds ratio
   07_ajuste_limiar.ipynb         # T22: ajuste do limiar de decisão (recall >= 0,80) e impacto por 1.000 pacientes
   08_eda_correlacao.ipynb        # T07: correlação, multicolinearidade, checagem de vazamento e relações não lineares
+  09_shap.ipynb                 # T25: interpretação do modelo final com SHAP (summary, dependence e waterfall)
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   pipeline.py                    # pipeline final (T27): modelo final + avaliação no teste (comando padrão do Docker)
@@ -53,7 +54,7 @@ src/cardio/
     train.py                     # CLI de treino: --modelo, --features, --sample (T13)
     evaluate.py                  # T20: evaluate(), matriz de confusão, summary_table() e baseline
     predict.py                   # predição com modelo salvo
-    explain.py                   # TODO: feature importance / SHAP
+    explain.py                   # SHAP (T25); feature importance (T24, TODO)
   visualization/
     eda.py                       # gráficos da EDA
     plots.py                     # TODO: gráficos para o relatório
