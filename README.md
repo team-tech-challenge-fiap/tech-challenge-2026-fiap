@@ -29,6 +29,8 @@ São 70.000 pacientes e 13 colunas (arquivo `data/raw/cardio_train.csv`, separad
 data/
   raw/cardio_train.csv           # dataset original
   processed/                     # dados preparados (gerados)
+  images/<classe>/               # extra: ECGs por classe, gerados por cardio_visual.data.preparar (fora do Git)
+  demo/                          # extra: 4 ECGs do teste cego (fora do Git; gabarito em data/demo_gabarito.csv)
 notebooks/
   00_projeto_final.ipynb         # notebook de ponta a ponta (T29, em construção)
   01_eda_visao_geral.ipynb       # T03: visão geral, alvo e qualidade dos dados
@@ -42,6 +44,9 @@ notebooks/
   09_shap.ipynb                 # T25: interpretação do modelo final com SHAP (summary, dependence e waterfall)
   10_analise_erros.ipynb         # T26: análise de erros e desempenho por subgrupo (modelo final, limiar da T22)
   11_feature_importance.ipynb    # T24: importância nativa, odds ratio, permutação e comparação com o conhecimento clínico
+  cnn_01_eda_imagens.ipynb       # extra (CNN-03): EDA das imagens de ECG
+  cnn_02_interpretacao.ipynb     # extra (CNN-08): erros e Grad-CAM do modelo final
+  cnn_03_projeto_imagens.ipynb   # extra (CNN-11): demonstração de ponta a ponta e teste cego
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   pipeline.py                    # pipeline final (T27): modelo final + avaliação no teste (comando padrão do Docker)
@@ -62,14 +67,32 @@ src/cardio/
     plots.py                     # TODO: gráficos para o relatório
   api/
     main.py                      # API FastAPI (/health; /predict TODO)
+src/cardio_visual/                # extra: diagnóstico por imagem de ECG (CNN), mesma organização do cardio
+  config.py                      # caminhos e parâmetros do extra (reaproveita SEED e split do cardio)
+  pipeline.py                    # preparar -> treinar o modelo final -> avaliar no teste (padrão do Docker do extra)
+  data/
+    preparar.py                  # zip do Kaggle -> data/images/<classe>/, sem cópias, e reserva do teste cego
+    loader.py                    # leitura das pastas e verificação de integridade
+    preprocessing.py             # recorte da grade, split 70/15/15, transformações e DataLoaders
+  models/
+    estimators/                  # um arquivo por modelo: build_model() (cnn_simples, resnet18)
+    train.py                     # CLI de treino com early stopping
+    cv.py                        # CLI de validação cruzada (5 folds)
+    evaluate.py                  # métricas por classe, intervalos de confiança e resultados
+    explain.py                   # Grad-CAM e análise de erros
+    predict.py                   # CLI de predição e teste cego
+    final_model.py               # CLI da avaliação única no teste
+  visualization/
+    plots.py                     # matriz de confusão e curvas ROC
 app/
   streamlit_app.py               # TODO: interface de demonstração (vídeo)
-models/                          # modelos gerados (.joblib)
+models/                          # modelos gerados (.joblib) e o modelo final do extra (cnn_resnet18_448.pt)
 results/
   figures/                       # gráficos gerados (.png)
   relatorio_tecnico.md           # esqueleto do relatório
 tests/                           # testes automatizados
 Dockerfile · docker-compose.yml · requirements.txt · pyproject.toml
+Dockerfile.visual · docker-compose.visual.yml · requirements-cnn.txt   # Docker e dependências do extra
 ```
 
 ## Onde fica cada coisa citada nas issues
@@ -255,6 +278,55 @@ docker compose -f docker-compose.visual.yml run --rm testes             # testes
 ```
 
 Para refazer a extração: `docker compose -f docker-compose.visual.yml run --rm preparar python -m cardio_visual.data.preparar --sobrescrever`.
+
+### Comandos (sem Docker)
+
+```bash
+python -m pip install -e ".[cnn]"
+python -m cardio_visual.data.preparar                    # zip do Kaggle -> data/images/<classe>/ e teste cego
+python -m cardio_visual.models.predict --demo            # classifica as 4 imagens do teste cego
+python -m cardio_visual.models.predict --demo --gabarito # idem, conferindo com data/demo_gabarito.csv
+python -m cardio_visual.models.final_model               # avaliação única no teste do modelo final
+python -m cardio_visual.models.train --modelo resnet18 --image-size 448 --epochs 20   # retreinar (~25 min na CPU)
+python -m cardio_visual.models.cv --modelo resnet18 --image-size 224                  # validação cruzada (~35 min na CPU)
+python -m cardio_visual.pipeline                         # caminho rápido (~1 min): teste cego + avaliação, sem treinar
+python -m cardio_visual.pipeline --treinar               # caminho completo (~25 min): preparar, treinar e avaliar
+pytest tests/test_visual_*.py                            # testes do extra (~2 min; não precisam do dataset)
+```
+
+### Resultados
+
+Modelo final: **ResNet18 com transfer learning, 448 px** (`models/cnn_resnet18_448.pt`, já no repositório). Escolhido pela
+validação e pela validação cruzada; o teste foi usado uma única vez.
+
+| | Acurácia | F1 macro | Observação |
+|---|---|---|---|
+| Validação: CNN simples, 224 px | 0,62 | 0,40 | baseline treinado do zero |
+| Validação: ResNet18, 224 px | 0,86 | 0,79 | validação cruzada: 0,83 ± 0,05 |
+| Validação: ResNet18, 448 px | 0,90 | 0,85 | escolhido |
+| **Teste: ResNet18, 448 px** | **0,95** | **0,88** | IC 95% do F1: 0,70 a 0,99; infarto com recall 0,50 (2 de 4) |
+| **Teste: normal × alterado** | 0,99 | 0,99 | recall 1,00 e especificidade 0,95 |
+
+Detalhes, interpretação (Grad-CAM) e discussão crítica: seção 10 de `results/relatorio_tecnico.md` e os notebooks
+`cnn_01_eda_imagens`, `cnn_02_interpretacao` e `cnn_03_projeto_imagens`.
+
+### Teste rápido (sem treinar)
+
+O modelo final já está no repositório, então não é preciso treinar para testar. Com o zip do Kaggle salvo em
+`data/archive.zip` (passo a passo acima), **um comando só** faz tudo em cerca de 1 minuto:
+
+```bash
+docker compose -f docker-compose.visual.yml build                # só na primeira vez
+docker compose -f docker-compose.visual.yml run --rm rapido      # ou, sem Docker: python -m cardio_visual.pipeline
+```
+
+Ele prepara as imagens, classifica as 4 do teste cego (`data/demo/`) conferindo com o gabarito e avalia o modelo final no
+teste, sem treinar e sem regravar os resultados versionados. Passos avulsos:
+
+- `python -m cardio_visual.models.predict --demo` classifica as 4 imagens sem mostrar a resposta; com `--gabarito`, confere.
+- `python -m cardio_visual.models.predict caminho/da/imagem.jpg` classifica outra imagem.
+
+O resultado é **apoio à decisão**: o modelo não substitui a avaliação do médico, que tem a palavra final.
 
 ## Entregáveis (checklist)
 

@@ -231,3 +231,132 @@ Os resultados comparativos podem ser consultados em `results/comparison_table.cs
 ## 7. Interpretação (feature importance / SHAP)
 ## 8. Discussão crítica (uso na prática — o médico tem a palavra final)
 ## 9. Conclusão
+
+## 10. Extra: diagnóstico por imagem de ECG (CNN)
+
+Complemento opcional do desafio: classificação de **imagens de eletrocardiograma (ECG)** com redes neurais convolucionais,
+no pacote `src/cardio_visual/` (separado do projeto tabular, com a mesma organização). O tema é o mesmo do projeto
+principal (doença cardiovascular), agora a partir de outra fonte de dados: o ECG impresso de 12 derivações.
+
+### 10.1 Problema e dataset
+
+O objetivo é uma **triagem**: dado o ECG de um paciente, indicar se ele parece normal ou se há sinais de batimento
+anormal, de infarto em curso ou de infarto prévio, para priorizar a leitura do cardiologista. O dataset é o
+[Cardiovascular ECG Images](https://www.kaggle.com/datasets/jayaprakashpondy/ecgimages/data) (Kaggle), com 4 classes:
+normal, batimento anormal, histórico de infarto e infarto.
+
+A verificação do dataset (`notebooks/cnn_01_eda_imagens.ipynb`, figura `cnn_eda_duplicatas.png`) mudou o tamanho real
+do problema:
+
+- O zip tem **1.376 imagens, mas só 491 diferentes**: as 448 imagens da pasta `test/` são **cópias** de imagens de
+  `train/`, e o próprio `train/` repete imagens (cada ECG de infarto aparece até 8 vezes). Avaliar no `test/` original
+  mediria o modelo em imagens que ele já viu.
+- Imagens únicas por classe: batimento anormal 233, normal 142, histórico de infarto 86 e **infarto só 30**.
+- Nenhum arquivo corrompido; todas as imagens são relatórios impressos de 2213 × 1572 px, com o mesmo layout.
+
+Por isso usamos **só as imagens únicas** e fizemos a nossa própria divisão. Antes dela, **1 imagem de cada classe foi
+sorteada e reservada para um teste cego** (`data/demo`, para o professor e a apresentação). As outras 487 foram divididas
+em **70/15/15, estratificado, com `SEED = 42`** (o mesmo critério do projeto tabular): 340 de treino, 73 de validação e
+74 de teste, com só 4 imagens de infarto na validação e 4 no teste.
+
+### 10.2 Pré-processamento
+
+- **Recorte da grade do traçado** (`RecorteGrade`): a grade ocupa a mesma posição nas 491 folhas (pixels 68 a 2176 na
+  horizontal e 283 a 1517 na vertical). Fora dela há só texto impresso: ID do paciente, data, hora e frequência cardíaca.
+  Esse texto não é o ECG e poderia virar **atalho** para o modelo, então é removido antes de tudo.
+- Redimensionamento para 448 × 448 px (cada derivação fica com ~110 px de largura, contra ~55 px em 224; figura
+  `cnn_eda_resolucao.png`) e normalização do ImageNet, necessária para o transfer learning.
+- **Aumento de dados só no treino**: rotação de até 2°, deslocamento de 2%, escala de ±2% e brilho/contraste. **Sem giro
+  horizontal ou vertical**: no ECG o eixo horizontal é o tempo, e inverter a imagem cria um traçado que não existe.
+- **Pesos de classe** na função de perda, para compensar o desbalanceamento.
+
+### 10.3 Modelos e por quê
+
+- **CNN simples (do zero)**: 4 blocos convolucionais e pooling global. É o baseline: mostra o que uma rede pequena
+  aprende sem conhecimento prévio.
+- **ResNet18 com transfer learning**: rede pré-treinada no ImageNet, com a última camada trocada para as 4 classes e todo
+  o corpo ajustado (fine-tuning). Com poucas centenas de imagens, reaproveitar filtros de bordas e formas já aprendidos é
+  a forma mais realista de chegar a um bom resultado.
+
+Treino com Adam (taxa 0,001, lotes de 32), até 20 épocas e **parada antecipada pelo F1 macro da validação** (paciência de
+5 épocas; com F1 empatado, vale a menor perda). A escolha do modelo usou **só a validação e a validação cruzada**; o teste
+foi usado **uma única vez**, no modelo final. Na CPU, o treino do ResNet18 leva ~6 min em 224 px e ~25 min em 448 px.
+
+### 10.4 Resultados
+
+**Validação** (73 imagens, `results/cnn_val_results.csv`):
+
+| Modelo | Acurácia | F1 macro (IC 95%) | Recall macro |
+|---|---|---|---|
+| CNN simples, 224 px | 0,62 | 0,40 (0,33 a 0,50) | 0,43 |
+| ResNet18, 224 px | 0,86 | 0,79 (0,58 a 0,92) | 0,75 |
+| **ResNet18, 448 px** | **0,90** | **0,85** (0,66 a 0,96) | **0,83** |
+
+**Validação cruzada** (5 folds sobre treino + validação, 224 px, `results/cnn_cv_results.csv`): ResNet18 com F1 macro
+**0,83 ± 0,05** e CNN simples com **0,60 ± 0,09**; o recall do infarto foi 0,72 ± 0,11 e 0,40 ± 0,14. O transfer
+learning é claramente superior. A vantagem do 448 px sobre o 224 px (0,85 contra 0,79 na validação) é do tamanho de
+cerca de um desvio-padrão da validação cruzada: é uma evidência fraca, e a escolha do 448 px também se apoia na EDA
+(mais detalhe do traçado por derivação).
+
+**Teste, modelo final ResNet18 448 px** (74 imagens, avaliação única; `results/cnn_test_results.csv`, figura
+`cnn_cm_resnet18_448_test.png`):
+
+| Classe | Precision | Recall | F1 | Imagens |
+|---|---|---|---|---|
+| Batimento anormal | 0,94 | 0,97 | 0,96 | 35 |
+| Histórico de infarto | 0,87 | 1,00 | 0,93 | 13 |
+| Infarto | 1,00 | **0,50** | 0,67 | 4 |
+| Normal | 1,00 | 0,95 | 0,98 | 22 |
+
+Acurácia 0,95, **F1 macro 0,88 (IC 95% de 0,70 a 0,99)** e AUC média de 0,99. Na **visão de triagem** (normal ×
+qualquer alteração), o modelo **sinalizou 100% dos ECGs alterados** com especificidade de 0,95.
+
+**Escolha da métrica.** Numa triagem, o erro mais grave é o falso negativo (um ECG alterado tratado como normal). Por
+isso a métrica principal é o **recall por classe** (e o recall da visão binária), acompanhado de precision, F1 e AUC; a
+acurácia sozinha esconderia o erro nas classes pequenas. Como o teste tem poucas imagens, os resultados vêm com
+**intervalo de confiança** (bootstrap).
+
+**Teste cego** (`notebooks/cnn_03_projeto_imagens.ipynb`): as 4 imagens reservadas foram classificadas corretamente (4
+de 4); a de infarto teve a menor confiança (61%). Com 4 imagens isso é uma demonstração, não uma medida de desempenho.
+
+### 10.5 Interpretação (Grad-CAM)
+
+Para imagens, o Grad-CAM cumpre o papel da feature importance/SHAP do projeto tabular: um mapa de calor mostra as regiões
+que mais pesaram na decisão (`notebooks/cnn_02_interpretacao.ipynb`, figura `cnn_gradcam_val.png`).
+
+- O calor cai sobre **derivações específicas** do traçado, e não sobre a grade em branco ou sobre texto (já removido pelo
+  recorte). Nos acertos de histórico de infarto, ele se concentra na região das precordiais V1 a V3; nos de infarto, na
+  tira de ritmo e nas derivações inferiores.
+- A medida objetiva (quanto do calor cai sobre os pixels do traçado, comparado à área que eles ocupam) dá uma razão de
+  1,11. O número fica perto de 1 também porque o mapa tem só 14 × 14 células e espalha o calor pela vizinhança do traçado.
+- Na validação houve 7 erros em 73 imagens, 3 deles com confiança de 80% ou mais. O pior foi um **infarto classificado
+  como normal com 99% de confiança**.
+
+O Grad-CAM é uma pista coerente com a leitura de um ECG (cada alteração aparece em derivações próprias), não uma prova de
+que o modelo reconhece a onda certa.
+
+### 10.6 Discussão crítica
+
+**O modelo pode ser usado na prática? Como?** Como **apoio à triagem**: ordenar a fila de ECGs para que os que parecem
+alterados sejam lidos primeiro. Na visão binária, ele não deixou passar nenhum ECG alterado no teste. **Não** deve ser usado
+para descartar infarto: a classe infarto tem só 30 imagens, o recall no teste foi de 2 em 4, e houve um infarto
+classificado como normal com 99% de confiança na validação. **O cardiologista tem sempre a palavra final.**
+
+Limitações:
+
+- **Dataset pequeno e repetitivo**: 491 ECGs diferentes, e os resultados têm intervalos de confiança largos (o F1 macro no
+  teste pode estar entre 0,70 e 0,99).
+- **Uma única fonte**: imagens do mesmo software e, provavelmente, do mesmo hospital; o desempenho em outro aparelho ou
+  outra população não foi medido.
+- **ECG impresso, não o sinal original**: a imagem perde resolução de tempo e amplitude que um cardiologista ou um
+  modelo de sinal usariam.
+- **Sem dados clínicos**: o modelo não sabe idade, sintomas ou exames anteriores, que o médico usa junto com o ECG.
+
+Próximos passos: mais imagens de infarto, validação externa (outro hospital), modelos sobre o sinal do ECG e treino em
+GPU para testar resoluções maiores.
+
+### 10.7 Conclusão do extra
+
+Com transfer learning (ResNet18), o modelo chega a F1 macro de 0,88 no teste e separa ECGs normais de alterados com
+recall de 100% e especificidade de 95%, mas com incerteza grande e fraqueza clara na classe infarto. Ele complementa o
+projeto tabular como uma segunda fonte de informação para a triagem cardiovascular, sempre como apoio à decisão médica.
