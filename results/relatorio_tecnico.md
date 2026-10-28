@@ -228,7 +228,155 @@ Os resultados comparativos podem ser consultados em `results/comparison_table.cs
 **Síntese.** Os cinco modelos apresentaram capacidade discriminativa semelhante, mas diferiram em interpretabilidade, custo computacional e comportamento de classificação. O XGBoost com o conjunto A foi selecionado para a etapa final, com ajuste posterior do limiar de decisão para priorizar a identificação de pacientes com doença cardiovascular. Os resultados representam validação experimental interna e não autorizam o uso isolado do sistema para diagnóstico médico.
 
 ## 6. Resultados
+
+Esta seção mostra como o modelo foi avaliado e o que ele alcançou. Os números da validação vêm de modelos treinados **apenas com os dados de treino**; o conjunto de teste foi usado **uma única vez**, no final. Todos os valores foram calculados em `notebooks/12_resultados_relatorio.ipynb`.
+
+### 6.1 Como medimos o desempenho
+
+Como o sistema deve apoiar a triagem, cada métrica responde a uma pergunta clínica diferente:
+
+| Métrica | Pergunta que responde | Por que importa aqui |
+|---|---|---|
+| **Recall** (sensibilidade) | Dos pacientes que têm a doença, quantos o modelo sinaliza? | É a métrica principal: um falso negativo é um doente que sai sem ser visto, o erro mais grave numa triagem. |
+| **Precision** | Dos pacientes sinalizados, quantos realmente têm a doença? | Mede os alarmes falsos, que geram consultas e exames desnecessários. |
+| **F1-score** | Qual o equilíbrio entre recall e precision? | Resume as duas em um único número. |
+| **AUC ROC** | O modelo dá risco maior aos doentes do que aos saudáveis, qualquer que seja o corte? | Compara modelos sem depender do limiar de decisão: 0,5 equivale a sortear e 1,0 é perfeito. |
+| **Acurácia** | Qual a porcentagem de acertos? | É informativa porque as classes são equilibradas (cerca de 50% cada), mas não distingue os dois tipos de erro. |
+
+### 6.2 Comparação dos modelos na validação
+
+Os cinco modelos foram avaliados nos mesmos 10.277 pacientes de validação, com o limiar padrão de 0,50. A tabela traz o conjunto A (11 variáveis originais) e, na última coluna, a AUC do conjunto B (com variáveis derivadas).
+
+| Modelo | Acurácia | Precision | Recall | F1 | AUC (conjunto A) | AUC (conjunto B) |
+|---|---|---|---|---|---|---|
+| XGBoost | 72,6% | 74,5% | 67,9% | 71,1% | 0,792 | 0,792 |
+| SVM | 72,8% | 74,1% | 69,3% | 71,6% | 0,792 | 0,791 |
+| Random Forest | 72,9% | 75,2% | 67,3% | 71,1% | 0,791 | 0,790 |
+| KNN | 72,5% | 75,3% | 66,0% | 70,4% | 0,785 | 0,786 |
+| Regressão Logística | 72,7% | 75,0% | 67,1% | 70,8% | 0,783 | 0,785 |
+| Baseline (sorteio) | 50,9% | 50,4% | 49,4% | 49,9% | 0,508 | 0,508 |
+
+Todos os modelos aprendem algo real: o baseline acerta cerca de 51%, e os cinco modelos ficam entre 72,5% e 72,9% de acurácia, com AUC entre 0,783 e 0,792. **A diferença entre os modelos é pequena** (menos de 0,01 de AUC), e o conjunto B não melhora nenhum deles (a maior diferença entre A e B é de 0,002). O XGBoost com o conjunto A foi escolhido por ter a maior AUC (empatada com o SVM e o Random Forest), treinar em menos de um segundo e permitir explicar as decisões com o SHAP (seção 7).
+
+![Curvas ROC dos cinco modelos no conjunto A, na validação](figures/roc_A.png)
+
+As curvas ROC dos cinco modelos praticamente se sobrepõem e ficam bem acima da diagonal do acaso. Nas curvas Precision-Recall, a precisão média vai de 0,761 (Regressão Logística) a 0,775 (XGBoost), contra cerca de 0,495 do baseline, que é a proporção de doentes.
+
+![Curvas Precision-Recall dos cinco modelos no conjunto A, na validação](figures/pr_A.png)
+
+A curva de calibração do XGBoost acompanha a diagonal: em média, a probabilidade prevista difere da frequência real de doença em apenas 1,4 ponto percentual, então a probabilidade pode ser lida como uma estimativa do risco do paciente.
+
+![Curva de calibração do XGBoost, na validação](figures/calibration_xgb.png)
+
+### 6.3 Limiar de decisão
+
+Com o corte padrão (0,50), o XGBoost deixa de sinalizar cerca de 1 em cada 3 doentes (recall de 67,9%). Como esse é o erro mais grave numa triagem, o limiar foi baixado seguindo uma regra definida **na validação**: o maior limiar que mantém o recall em pelo menos 0,80, o que dá **0,36**.
+
+![Recall, precision e F1 do modelo final por limiar de decisão, na validação](figures/t33_limiar_xgb_A.png)
+
+| | Limiar 0,50 | Limiar 0,36 | Diferença |
+|---|---|---|---|
+| Recall | 67,9% | 81,7% | +13,8 p.p. |
+| Precision | 74,5% | 65,8% | −8,7 p.p. |
+| Especificidade | 77,3% | 58,4% | −18,9 p.p. |
+| Doentes **não sinalizados** por 1.000 pacientes | 159 | 91 | −68 |
+| Saudáveis **encaminhados** por 1.000 pacientes | 115 | 210 | +95 |
+
+A cada 1.000 pacientes avaliados, o limiar de 0,36 faz **68 doentes a mais** serem sinalizados, em troca de **95 encaminhamentos extras** de pessoas saudáveis: cerca de 1,4 alarme falso para cada doente a mais encontrado. A troca é aceitável porque os dois erros têm custos diferentes: um doente não sinalizado pode ficar sem tratamento, enquanto um falso positivo custa uma consulta ou um exame a mais, e o médico confirma o diagnóstico.
+
+### 6.4 Resultado final no conjunto de teste
+
+O modelo final é o **XGBoost com o conjunto A**, treinado com treino e validação juntos (58.232 pacientes) e com o limiar de 0,36 fixado antes de se olhar o teste. Ele foi avaliado **uma única vez** em 10.277 pacientes que não participaram de nenhuma etapa anterior (5.086 com doença e 5.191 sem).
+
+| Métrica | Valor |
+|---|---|
+| AUC ROC | 0,810 |
+| Recall | 83,1% |
+| Precision | 66,9% |
+| F1-score | 74,2% |
+| Especificidade | 59,8% |
+| Acurácia | 71,3% |
+
+![Matriz de confusão do modelo final no conjunto de teste](figures/t33_matriz_confusao_teste.png)
+
+Dos 5.086 pacientes com doença, o modelo sinalizou **4.228** e deixou de sinalizar **858**. Dos 5.191 saudáveis, liberou 3.102 e encaminhou **2.089** sem necessidade. A cada 1.000 pacientes (49,5% doentes), isso significa 411 doentes sinalizados, **83 não sinalizados**, **203 saudáveis encaminhados** e 302 saudáveis liberados. Entre os pacientes sinalizados, 67 em cada 100 realmente têm a doença. O recall de 83,1% atinge a meta de pelo menos 80% definida para a triagem.
+
+A AUC no teste (0,810) é 0,018 maior que a da validação (0,792). Isso não deve ser lido como uma melhora do modelo: o modelo final usou mais dados de treino e o teste é outra amostra de pacientes. Como há uma única divisão dos dados, não há intervalo de confiança que mostre quão estável é essa diferença.
+
+### 6.5 Por que o desempenho para perto de 0,79 de AUC?
+
+Quatro verificações com o XGBoost e o conjunto A indicam que o limite está nas informações disponíveis, e não no algoritmo.
+
+![Curva de aprendizado e efeito da complexidade do modelo](figures/t33_limite_do_desempenho.png)
+
+- **Mais dados não ajudam.** A AUC na validação é 0,783 com 2.397 pacientes no treino, 0,790 com 11.988, 0,791 com 23.977 e 0,792 com os 47.955: ela para de subir com um quarto a metade do treino.
+- **Modelos mais complexos pioram.** Com árvores de profundidade 4, 8 e 12, a AUC no treino sobe (0,808, 0,902 e 0,994), mas na validação cai (0,792, 0,781 e 0,759): o modelo maior decora ruído em vez de aprender padrões.
+- **Combinar modelos não ajuda.** A média das probabilidades de Regressão Logística, Random Forest e XGBoost dá AUC de 0,7906, e a dos cinco modelos, 0,7914, ambas abaixo do melhor modelo sozinho (0,7919).
+- **A informação é limitada.** Só as duas pressões arteriais já dão AUC de 0,746, contra 0,792 com as 11 variáveis. Além disso, a pressão foi registrada com pouca precisão: 97% das sistólicas e das diastólicas terminam em zero, e 43% dos pacientes têm exatamente 120/80 ou 140/90.
+
+Essa é uma **inferência** a partir dessas verificações, e não uma prova. O que provavelmente melhoraria o resultado são informações que o dataset não tem: valores numéricos de colesterol e glicose (hoje só há três níveis), uso de medicamentos para pressão (que pode deixar a pressão medida "normal" em um paciente doente), histórico familiar, exames como o eletrocardiograma e uma medida de pressão mais precisa.
+
 ## 7. Interpretação (feature importance / SHAP)
+
+Um modelo útil na prática precisa poder ser explicado ao médico. Esta seção mostra quais variáveis o modelo usa, de duas formas: a **importância das variáveis** (T24), que olha o modelo como um todo, e o **SHAP** (T25), que mostra como cada variável empurra o risco de cada paciente.
+
+### 7.1 Quais variáveis mais pesam
+
+A medida mais confiável aqui é a **importância por permutação**: os valores de uma variável são embaralhados entre os pacientes da validação e mede-se o quanto a AUC cai. Se o modelo piora muito, ele dependia daquela variável. Ela vale igual para qualquer modelo e foi calculada para a Regressão Logística, o Random Forest e o XGBoost.
+
+![Importância por permutação nos três modelos, na validação](figures/t24_permutacao.png)
+
+Os **três modelos concordam** nas três variáveis mais importantes e na ordem delas: **pressão sistólica, idade e colesterol**. Embaralhar a pressão sistólica derruba a AUC em 0,161 (Regressão Logística), 0,162 (Random Forest) e 0,164 (XGBoost), de cinco a seis vezes o efeito da idade (0,028, 0,032 e 0,034) e do colesterol (0,025, 0,027 e 0,027). As demais variáveis têm efeito pequeno.
+
+A importância nativa das árvores engana em um ponto: ela coloca a **pressão diastólica** em 2º lugar (20% no Random Forest e 17% no XGBoost), mas pela permutação ela fica em 4º e 5º. É um viés conhecido, porque a diastólica anda junto com a sistólica (correlação de 0,74) e as árvores a usam mesmo quando ela não acrescenta informação.
+
+![Importância nativa do Random Forest e do XGBoost](figures/t24_importancia_nativa.png)
+
+A Regressão Logística permite ler o efeito como **odds ratio**, que mostra por quanto a chance de doença é multiplicada, mantendo as outras variáveis iguais:
+
+![Odds ratio da Regressão Logística por incremento clínico](figures/t24_odds_ratio_regressao.png)
+
+
+- **pressão sistólica:** a cada 10 mmHg a mais, a chance é multiplicada por **1,75** (75% maior);
+- **idade:** a cada 5 anos, por **1,29**;
+- **colesterol:** a cada nível (normal, acima, muito acima), por **1,64**;
+- **fumo (0,86), álcool (0,80), glicose (0,88) e atividade física (0,80)** ficam abaixo de 1. Para a atividade física, isso é o esperado. Para fumo e álcool, não se deve ler como efeito protetor: são hábitos autodeclarados e já tinham sinal contrário ao esperado na análise exploratória. A glicose anda junto com o colesterol (correlação de 0,40), e com o colesterol no modelo ela pouco acrescenta.
+
+### 7.2 Como cada fator decide (SHAP)
+
+O SHAP mede, para cada paciente, quanto cada variável empurra o risco para cima ou para baixo em relação ao risco médio. Foi calculado no modelo final, em 1.500 pacientes da validação.
+
+![SHAP: contribuição de cada variável para o risco](figures/t25_shap_summary.png)
+
+- Pressão sistólica (46%), idade (17%) e colesterol (13%) respondem por cerca de **76%** de toda a contribuição do modelo.
+- A pressão sistólica passa a **aumentar** o risco a partir de **130 mmHg**, o mesmo corte de hipertensão estágio 1 da diretriz ACC/AHA; o modelo aprendeu esse limite sozinho, a partir dos dados.
+- A idade age de forma gradual e passa a pesar a favor da doença a partir de **55 anos**.
+- Hábitos autodeclarados (fumo, álcool e atividade física), altura e sexo têm peso pequeno.
+
+![SHAP: contribuição da pressão sistólica conforme o valor](figures/t25_shap_dependencia_pressao.png)
+
+![SHAP: contribuição da idade conforme o valor](figures/t25_shap_dependencia_idade.png)
+
+Cada previsão pode ser explicada ao médico, inclusive os erros: os gráficos de cascata abaixo mostram, para um acerto com doença, um acerto sem doença e um doente não sinalizado, quais variáveis levaram o risco até a previsão final.
+
+![Cascata SHAP: paciente com doença corretamente sinalizado](figures/t25_shap_waterfall_acerto_doente.png)
+
+![Cascata SHAP: paciente sem doença corretamente liberado](figures/t25_shap_waterfall_acerto_saudavel.png)
+
+![Cascata SHAP: paciente com doença que o modelo não sinalizou](figures/t25_shap_waterfall_erro.png)
+
+No doente não sinalizado, a pressão (120 mmHg) parecia a de um paciente de baixo risco, e o modelo não enxerga, por exemplo, o uso de remédio para pressão.
+
+### 7.3 O modelo concorda com o conhecimento clínico?
+
+**Em grande parte, sim.** Pressão arterial, idade e colesterol são fatores de risco cardiovascular conhecidos e são as três primeiras variáveis do modelo, na mesma ordem em todos os métodos de permutação e no SHAP. A pressão sistólica domina, com um efeito crescente a partir do mesmo corte usado na prática clínica. O peso aparece em seguida (4ª a 5ª posição), coerente com o excesso de peso como fator de risco, e altura e sexo quase não pesam. A figura resume a posição de cada variável nos sete métodos usados na T24 (três permutações, duas importâncias nativas, o SHAP e o tamanho do efeito na Regressão Logística).
+
+![Posição de cada variável em cada método de importância](figures/t24_comparacao_rankings.png)
+
+Dois pontos pedem cautela. A **glicose**, um fator de risco clássico, pesa pouco: ela tem só três níveis e anda junto com o colesterol, e uma explicação plausível, não testada aqui, é que parte da informação dela já entre pelo colesterol. Os **hábitos autodeclarados** também pesam pouco, e isso pode refletir a qualidade do dado (subnotificação), e não que eles não importem para o coração.
+
+**Limites.** Importância mostra o que o modelo usa, não o que causa a doença, e variáveis correlacionadas dividem a importância entre si. Os números vêm de uma única divisão dos dados. O modelo é um **apoio à triagem**: o resultado não autoriza o uso isolado para diagnóstico, e a decisão final é sempre do médico.
+
 ## 8. Discussão crítica (uso na prática — o médico tem a palavra final)
 ## 9. Conclusão
 

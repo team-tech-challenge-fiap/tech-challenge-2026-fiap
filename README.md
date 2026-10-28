@@ -47,6 +47,7 @@ notebooks/
   cnn_01_eda_imagens.ipynb       # extra (CNN-03): EDA das imagens de ECG
   cnn_02_interpretacao.ipynb     # extra (CNN-08): erros e Grad-CAM do modelo final
   cnn_03_projeto_imagens.ipynb   # extra (CNN-11): demonstração de ponta a ponta e teste cego
+  12_resultados_relatorio.ipynb  # T33: números e figuras das seções 6 e 7 do relatório (resultados e interpretação)
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   pipeline.py                    # pipeline final (T27): modelo final + avaliação no teste (comando padrão do Docker)
