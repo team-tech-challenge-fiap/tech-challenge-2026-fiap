@@ -1,0 +1,6 @@
+# Extra de imagens (CNN). Instale com:  pip install -r requirements-cnn.txt
+# Versão CPU do PyTorch (menor): usa o índice abaixo.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+torchvision>=0.17
+pillow>=10

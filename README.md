@@ -185,6 +185,30 @@ O treino usa `load_splits()` (70/15/15), avalia na **validação**, salva `model
 acrescenta uma linha em `results/val_results.csv`. `--modelo` é o nome de um arquivo em
 `src/cardio/models/estimators/`; use `--sample 5000` para testes rápidos.
 
+## Extra: diagnóstico por imagem de ECG (CNN)
+
+Complemento opcional do desafio: classificação de imagens de eletrocardiograma (ECG) com redes neurais convolucionais
+(PyTorch). Fica no pacote **`src/cardio_visual/`**, separado do `cardio` (projeto tabular), com dependências próprias.
+
+### Dataset: como baixar
+
+As imagens **não ficam no Git** (são ~300 MB zipadas). Dataset: [Cardiovascular ECG Images (Kaggle)](https://www.kaggle.com/datasets/jayaprakashpondy/ecgimages/data).
+
+1. Entre no Kaggle com a sua conta (o download exige login).
+2. Na página do dataset, clique em **Download** e depois em **Download dataset as zip** (~300 MB, 905 MB descompactado).
+3. Salve o arquivo como `data/archive.zip` (é o nome que o Kaggle já usa).
+   Alternativa pela API do Kaggle (exige o token `kaggle.json`):
+   `kaggle datasets download -d jayaprakashpondy/ecgimages -p data` (gera `data/ecgimages.zip`; use `--zip` com esse caminho no passo 4).
+4. Prepare as imagens: `python -m cardio_visual.data.preparar` (ou `--zip <caminho do zip>`).
+
+O zip vem com as pastas `train/` e `test/`, mas **elas não são usadas como estão**: todas as imagens vão para **uma pasta só por
+classe** em `data/images/<classe>/`, sem cópias repetidas, e a divisão em treino, validação e teste é **feita por nós**
+(70/15/15 estratificado, `SEED = 42`), como no projeto tabular. O motivo está na seção de qualidade do dataset.
+
+### Instalação
+
+`python -m pip install -e ".[cnn]"` (PyTorch CPU; para GPU, instale o PyTorch com CUDA antes).
+
 ## Entregáveis (checklist)
 
 - [x] Estrutura do projeto, Dockerfile e README
