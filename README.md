@@ -33,7 +33,7 @@ eletrocardiograma com redes neurais (seção [Extra](#extra-diagnóstico-por-ima
 | Sara Felix | [@sarafelix25](https://github.com/sarafelix25) |
 
 - **Vídeo de demonstração:** _link a publicar (T36)_
-- **Relatório técnico:** [`results/relatorio_tecnico.md`](results/relatorio_tecnico.md) (o PDF final sai na T35)
+- **Relatório técnico:** [`results/relatorio_tecnico.md`](results/relatorio_tecnico.md); PDF em [`entrega/Tech_Challenge_Fase1.pdf`](entrega/Tech_Challenge_Fase1.pdf) (em revisão; para gerar de novo: `python entrega/gerar_pdf.py`)
 - **Repositório:** <https://github.com/team-tech-challenge-fiap/tech-challenge-2026-fiap>
 
 ## Guia rápido

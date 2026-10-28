@@ -1,8 +1,8 @@
 # Relatório Técnico — Tech Challenge Fase 1
 
-**Equipe:**
-**Repositório:**
-**Vídeo:**
+**Equipe:** Guilherme Saar Santos, Wesley Berto, Michel Zarif, Luis Felipe Laudacio e Sara Felix
+**Repositório:** <https://github.com/team-tech-challenge-fiap/tech-challenge-2026-fiap>
+**Vídeo:** em andamento
 
 ## 1. Problema
 
@@ -53,6 +53,8 @@ Os detalhes ficam nos notebooks `01_eda_visao_geral.ipynb` (T03), `02_eda_demogr
   taxa de doença quase não muda (≈ 50%), então a limpeza não enviesa o alvo.
   Figuras: `t03_alvo.png`, `t03_faixas.png` e `t03_limpeza.png`.
 
+![Registros removidos por cada regra de limpeza](figures/t03_limpeza.png)
+
 ### 3.2 O que se relaciona com a doença
 
 Os números abaixo são sobre os 68.509 pacientes limpos; a taxa de doença é a proporção com `cardio = 1`.
@@ -69,6 +71,13 @@ e `t06_colesterol_glicose.png` (colesterol e glicose).
 | **Sexo** | Praticamente nenhuma: 49% das mulheres e 50% dos homens têm doença (correlação de 0,01). Vale a pena lembrar que 65% da amostra são mulheres. |
 | **Hábitos** | Efeito fraco e, no fumo e no álcool, **contrário ao esperado**: 47% de doença entre fumantes contra 50% entre não fumantes. Quem faz atividade física tem 49% contra 53% de quem não faz. |
 
+![Correlação de cada variável com a doença, nos dados limpos](figures/t07_ranking_alvo.png)
+
+![Taxa de doença por faixa de idade e de pressão arterial](figures/t07_taxa_por_faixa.png)
+
+A segunda figura mostra o que a correlação não capta: a idade sobe de forma contínua, mas a pressão sistólica tem um
+degrau entre 120 e 140 mmHg e se estabiliza acima de 140, nos mesmos cortes usados na prática clínica.
+
 ### 3.3 Cuidados com a interpretação
 
 - **Hábitos autodeclarados não são confiáveis.** O resultado "fumar protege o coração" não indica que fumar
@@ -82,6 +91,7 @@ e `t06_colesterol_glicose.png` (colesterol e glicose).
 - **Não há vazamento de dados (T07):** o `id` não tem relação com a doença (correlação de 0,004 e AUC de 0,50
   usando só o `id`) e fica fora das variáveis do modelo, e nenhuma variável é consequência direta do
   diagnóstico. A falta de informação sobre o tratamento do paciente é uma limitação do dataset, e não vazamento.
+
 ## 4. Estratégias de pré-processamento
 
 O pré-processamento transforma o arquivo bruto (70.000 pacientes) em dados prontos para os modelos. Ele tem
@@ -140,7 +150,7 @@ a resposta" ao modelo:
 Com isso, cada modelo foi treinado com dois **conjuntos de variáveis**: o **A**, com as 11 variáveis originais
 já limpas (idade, sexo, altura, peso, pressões, colesterol, glicose, fumo, álcool e atividade física), e o **B**,
 com o A mais as 5 derivadas. Comparar os dois mostra se a engenharia de variáveis traz ganho real. Nos
-resultados (seção 5), a diferença entre A e B ficou abaixo de 0,01 de AUC em todos os modelos: as derivadas
+resultados (seção 6), a diferença entre A e B ficou abaixo de 0,01 de AUC em todos os modelos: as derivadas
 são combinações das variáveis originais, que os modelos já conseguem aproveitar sozinhos.
 
 ### 4.3 Divisão em treino, validação e teste (T09)
@@ -480,7 +490,23 @@ risco baixo vale pouco. Nesses grupos, a avaliação clínica deve pesar mais do
    clínicos de risco cardiovascular.
 4. **Avaliar com o médico:** medir, num estudo piloto, se a priorização reduz o tempo até o diagnóstico sem aumentar
    demais a fila de exames.
+
 ## 9. Conclusão
+
+Com dados de uma consulta de rotina, é possível construir um apoio à triagem cardiovascular útil, mas com limites
+claros. Depois de limpar 1.491 registros impossíveis, os cinco algoritmos testados chegaram ao mesmo patamar de AUC na
+validação (0,783 a 0,792), o que indica que o limite está nas variáveis disponíveis e não no algoritmo (seção 6.5).
+
+O modelo final, um XGBoost com as 11 variáveis originais e o limiar de decisão ajustado para 0,36, foi avaliado uma única
+vez no teste: AUC de 0,810 e **recall de 83,1%**, acima da meta de 80% definida para a triagem. A cada 1.000 pacientes,
+ele deixa de sinalizar cerca de 83 doentes e encaminha cerca de 203 pessoas saudáveis para exames de confirmação. As
+decisões são explicáveis: pressão sistólica, idade e colesterol respondem pela maior parte do risco estimado, em
+concordância com os fatores de risco conhecidos, e a pressão passa a pesar a partir de 130 mmHg (seção 7).
+
+O uso indicado é **ordenar a fila de exames**, nunca diagnosticar. O modelo falha justamente em quem parece saudável
+(pacientes jovens ou com pressão normal, seção 8.3), foi treinado com uma amostra de uma única fonte e não prevê doença
+futura. Antes de qualquer uso real, ele precisaria de variáveis clínicas mais ricas e de validação em dados de outros
+serviços. A decisão final é sempre do médico.
 
 ## 10. Extra: diagnóstico por imagem de ECG (CNN)
 
@@ -503,6 +529,8 @@ do problema:
   mediria o modelo em imagens que ele já viu.
 - Imagens únicas por classe: batimento anormal 233, normal 142, histórico de infarto 86 e **infarto só 30**.
 - Nenhum arquivo corrompido; todas as imagens são relatórios impressos de 2213 × 1572 px, com o mesmo layout.
+
+![Arquivos no zip do Kaggle comparados com as imagens realmente diferentes, por classe](figures/cnn_eda_duplicatas.png)
 
 Por isso usamos **só as imagens únicas** e fizemos a nossa própria divisão. Antes dela, **1 imagem de cada classe foi
 sorteada e reservada para um teste cego** (`data/demo`, para o professor e a apresentação). As outras 487 foram divididas
@@ -558,6 +586,8 @@ cerca de um desvio-padrão da validação cruzada: é uma evidência fraca, e a 
 | Infarto | 1,00 | **0,50** | 0,67 | 4 |
 | Normal | 1,00 | 0,95 | 0,98 | 22 |
 
+![Matriz de confusão do modelo final de imagens (ResNet18, 448 px) no teste](figures/cnn_cm_resnet18_448_test.png)
+
 Acurácia 0,95, **F1 macro 0,88 (IC 95% de 0,70 a 0,99)** e AUC média de 0,99. Na **visão de triagem** (normal ×
 qualquer alteração), o modelo **sinalizou 100% dos ECGs alterados** com especificidade de 0,95.
 
@@ -573,6 +603,8 @@ de 4); a de infarto teve a menor confiança (61%). Com 4 imagens isso é uma dem
 
 Para imagens, o Grad-CAM cumpre o papel da feature importance/SHAP do projeto tabular: um mapa de calor mostra as regiões
 que mais pesaram na decisão (`notebooks/cnn_02_interpretacao.ipynb`, figura `cnn_gradcam_val.png`).
+
+![Grad-CAM na validação: regiões que mais pesaram em acertos (verde) e erros (vermelho)](figures/cnn_gradcam_val.png)
 
 - O calor cai sobre **derivações específicas** do traçado, e não sobre a grade em branco ou sobre texto (já removido pelo
   recorte). Nos acertos de histórico de infarto, ele se concentra na região das precordiais V1 a V3; nos de infarto, na
