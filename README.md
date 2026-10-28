@@ -42,6 +42,7 @@ notebooks/
   09_shap.ipynb                 # T25: interpretação do modelo final com SHAP (summary, dependence e waterfall)
   10_analise_erros.ipynb         # T26: análise de erros e desempenho por subgrupo (modelo final, limiar da T22)
   11_feature_importance.ipynb    # T24: importância nativa, odds ratio, permutação e comparação com o conhecimento clínico
+  12_resultados_relatorio.ipynb  # T33: números e figuras das seções 6 e 7 do relatório (resultados e interpretação)
 src/cardio/
   config.py                      # SEED, caminhos e contrato do dataset
   pipeline.py                    # pipeline final (T27): modelo final + avaliação no teste (comando padrão do Docker)
