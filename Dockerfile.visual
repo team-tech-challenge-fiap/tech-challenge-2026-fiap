@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+# Imagem do EXTRA (diagnóstico por imagem de ECG, pacote src/cardio_visual). Separada da imagem do projeto tabular
+# (Dockerfile) porque o PyTorch é grande e só o extra precisa dele. As imagens não entram na imagem: o zip do
+# Kaggle fica em data/archive.zip e a pasta do projeto é montada como volume (ver docker-compose.visual.yml).
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PROJECT_ROOT=/app \
+    PYTHONPATH=/app/src \
+    MPLBACKEND=Agg
+
+WORKDIR /app
+
+# Dependências primeiro, para aproveitar o cache de camadas (PyTorch na versão CPU)
+COPY requirements-cnn.txt .
+RUN pip install --upgrade pip && pip install -r requirements-cnn.txt
+
+COPY pyproject.toml .
+COPY src/ src/
+COPY tests/ tests/
+
+# Padrão: caminho rápido (~1 min, sem treinar): prepara as imagens, roda o teste cego e avalia no teste o modelo
+# final que já está no repositório. Caminho completo (treina, ~25 min): python -m cardio_visual.pipeline --treinar
+CMD ["python", "-m", "cardio_visual.pipeline"]

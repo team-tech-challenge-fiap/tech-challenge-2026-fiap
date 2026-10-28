@@ -1,0 +1,73 @@
+# Docker do EXTRA (imagens de ECG, src/cardio_visual), separado do docker-compose.yml do projeto tabular.
+# Antes: baixe o zip do Kaggle e salve como data/archive.zip (ver README, seção do extra).
+#
+#   docker compose -f docker-compose.visual.yml build
+#   docker compose -f docker-compose.visual.yml run --rm preparar   -> extrai o zip para data/images/<classe>/ e reserva o teste cego
+#   docker compose -f docker-compose.visual.yml run --rm demo       -> classifica as 4 imagens do teste cego (data/demo)
+#   docker compose -f docker-compose.visual.yml run --rm gabarito   -> idem, conferindo com data/demo_gabarito.csv
+#   docker compose -f docker-compose.visual.yml run --rm treino     -> treina o modelo final (ResNet18, 448 px) na validação
+#   docker compose -f docker-compose.visual.yml run --rm validacao-cruzada -> 5 folds sobre treino + validação
+#   docker compose -f docker-compose.visual.yml run --rm final      -> avaliação única no teste do modelo final
+#   docker compose -f docker-compose.visual.yml run --rm rapido     -> caminho rápido (~1 min): preparar, teste cego e
+#                                                                   avaliação no teste com o modelo do repositório
+#   docker compose -f docker-compose.visual.yml run --rm completo   -> caminho completo (~25 min): preparar, treinar e avaliar
+#   docker compose -f docker-compose.visual.yml run --rm testes     -> testes do extra
+#
+# Outros argumentos de treino: docker compose -f docker-compose.visual.yml run --rm treino \
+#   python -m cardio_visual.models.train --modelo cnn_simples --epochs 20
+
+name: tech-challenge-cardio-visual  # projeto Compose próprio, separado do docker-compose.yml
+
+x-base: &base
+  image: tech-challenge-cardio-visual:latest  # construída pelo serviço "preparar" (build); os outros reaproveitam
+  pull_policy: never
+  working_dir: /app
+  volumes:
+    - ./:/app                         # código, data/archive.zip, data/images, models/ e results/ sincronizados
+    - torch-cache:/root/.cache/torch  # pesos pré-treinados do ResNet18 baixados uma vez só
+  environment:
+    - PROJECT_ROOT=/app
+    - PYTHONPATH=/app/src
+
+services:
+  preparar:
+    <<: *base
+    build:
+      context: .
+      dockerfile: Dockerfile.visual
+    command: python -m cardio_visual.data.preparar
+
+  treino:
+    <<: *base
+    command: python -m cardio_visual.models.train --modelo resnet18 --image-size 448 --epochs 20
+
+  validacao-cruzada:
+    <<: *base
+    command: python -m cardio_visual.models.cv --modelo resnet18 --image-size 224 --folds 5 --epochs 15
+
+  final:
+    <<: *base
+    command: python -m cardio_visual.models.final_model
+
+  rapido:
+    <<: *base
+    command: python -m cardio_visual.pipeline
+
+  completo:
+    <<: *base
+    command: python -m cardio_visual.pipeline --treinar
+
+  demo:
+    <<: *base
+    command: python -m cardio_visual.models.predict --demo
+
+  gabarito:
+    <<: *base
+    command: python -m cardio_visual.models.predict --demo --gabarito
+
+  testes:
+    <<: *base
+    command: sh -c "pytest -q tests/test_visual_*.py"
+
+volumes:
+  torch-cache:

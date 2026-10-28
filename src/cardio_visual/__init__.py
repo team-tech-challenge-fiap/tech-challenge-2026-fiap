@@ -18,7 +18,8 @@ O extra é opcional e tem dependências próprias (PyTorch), que o projeto princ
         final_model.py         CNN-09 · avaliação única do modelo final no teste (CLI)
     visualization/
         plots.py               matriz de confusão e curvas ROC, salvas em results/figures/
-    pipeline.py                CNN-10 · preparar -> treinar o modelo final -> avaliar no teste (padrão do Docker)
+    pipeline.py                CNN-10 · padrão do Docker: caminho rápido (teste cego e avaliação com o modelo do
+                               repositório, sem treinar) ou completo com --treinar
 
 Exige as dependências opcionais: ``pip install -e ".[cnn]"``.
 """

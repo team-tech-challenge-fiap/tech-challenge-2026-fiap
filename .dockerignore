@@ -17,3 +17,8 @@ venv
 models/*.joblib
 results/figures/*.png
 data/processed/*.csv
+
+# Extra de imagens (CNN): imagens, zip do Kaggle e checkpoints ficam fora da imagem (entram pelo volume)
+data/images/
+data/*.zip
+models/*.pt
