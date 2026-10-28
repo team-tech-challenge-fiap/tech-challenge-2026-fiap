@@ -378,6 +378,108 @@ Dois pontos pedem cautela. A **glicose**, um fator de risco clássico, pesa pouc
 **Limites.** Importância mostra o que o modelo usa, não o que causa a doença, e variáveis correlacionadas dividem a importância entre si. Os números vêm de uma única divisão dos dados. O modelo é um **apoio à triagem**: o resultado não autoriza o uso isolado para diagnóstico, e a decisão final é sempre do médico.
 
 ## 8. Discussão crítica (uso na prática — o médico tem a palavra final)
+
+Esta seção discute se o modelo pode ser usado na prática, onde ele falha e o que seria preciso para melhorá-lo.
+Os números de subgrupo vêm de `notebooks/10_analise_erros.ipynb` (T26), calculados na validação com o modelo final
+(XGBoost, conjunto A, limiar 0,36) treinado só com os dados de treino.
+
+### 8.1 O modelo pode ser usado na prática? Como?
+
+**Sim, como apoio à triagem, nunca como diagnóstico.** O uso proposto é ordenar a fila: entre os pacientes de uma
+consulta de rotina, indicar quais devem fazer exames cardiológicos completos primeiro. No teste, o modelo sinalizou
+**83 de cada 100 doentes** (recall de 83,1%), e **67 de cada 100 pacientes sinalizados** realmente tinham a doença
+(seção 6.4).
+
+Na prática, isso significa:
+
+- **"Risco alto" é um pedido de investigação, não um diagnóstico.** Um em cada três pacientes sinalizados é saudável e
+  será liberado depois dos exames. É o custo aceito para perder menos doentes (seção 6.3).
+- **"Risco baixo" não exclui a doença.** O modelo deixa passar cerca de 17% dos doentes. Um paciente com sintomas,
+  histórico familiar ou outro motivo clínico de preocupação deve ser investigado, qualquer que seja o resultado.
+- **O médico tem sempre a palavra final.** O modelo só vê 11 variáveis; o médico vê o paciente inteiro. A explicação de
+  cada previsão (SHAP, seção 7.2) permite ao médico conferir *por que* o modelo deu aquele risco e discordar dele.
+
+### 8.2 Por que o desempenho fica em torno de 73%
+
+A acurácia fica perto de 73% (AUC de 0,79) em todos os cinco modelos, e a seção 6.5 mostra que mais dados ou modelos
+mais complexos não mudam isso. A explicação está nas variáveis disponíveis, e não no algoritmo:
+
+- **Variáveis simples.** São dados de uma consulta de rotina; faltam os exames que de fato confirmam a doença.
+- **Colesterol e glicose em só 3 níveis** (normal, acima, muito acima). Dois pacientes com colesterol de 250 e de
+  320 mg/dL podem cair no mesmo nível, e o modelo não consegue diferenciá-los.
+- **Hábitos autodeclarados** (fumo, álcool, atividade física): sim/não, sem quantidade, e com sinal contrário ao
+  esperado no fumo e no álcool (seção 3.3), o que indica subnotificação.
+- **Erros de registro.** Mesmo depois da limpeza (seção 3.1), a pressão foi anotada de forma arredondada: 97% das
+  medidas terminam em zero e 43% dos pacientes têm exatamente 120/80 ou 140/90 (seção 6.5).
+- **Falta o tratamento.** Um hipertenso que toma remédio pode ter a pressão "normal" no dia da consulta. Para o
+  modelo, ele parece saudável.
+
+### 8.3 Onde o modelo erra (T26)
+
+O desempenho não é igual para todos os pacientes. A figura mostra recall, precision e F1 por subgrupo; em vermelho,
+os grupos mais de 0,05 abaixo do geral.
+
+![Desempenho do modelo final por subgrupo, na validação](figures/t26_subgrupos.png)
+
+| Subgrupo | Pacientes | % com doença | Recall |
+|---|---|---|---|
+| Todos | 10.277 | 49,5% | 0,82 |
+| Mulheres / homens | 6.757 / 3.520 | 49,3% / 49,8% | 0,82 / 0,81 |
+| Idade < 45 anos | 1.533 | 29,9% | **0,59** |
+| Idade > 55 anos | 4.640 | 60,1% | 0,94 |
+| Pressão normal | 1.487 | 23,9% | **0,30** |
+| Hipertensão estágio 2 | 3.490 | 77,3% | 0,99 |
+| IMC normal | 3.784 | 39,4% | **0,70** |
+
+- **Não há diferença entre os sexos** (recall de 0,82 nas mulheres e 0,81 nos homens).
+- **O modelo falha justamente em quem parece saudável.** Com pressão normal, ele encontra só **3 em cada 10 doentes**;
+  abaixo de 45 anos, 6 em cada 10. Esses grupos têm menos doença, e os doentes deles se parecem com os saudáveis nas
+  variáveis disponíveis.
+- **Os doentes não sinalizados parecem saudáveis.** Dos 929 doentes que o modelo deixou passar na validação, 27% têm
+  pressão normal (contra 3% dos doentes que ele encontrou) e 30% não têm nenhum fator de risco aparente (contra 11%).
+  Na média, eles têm pressão, idade, IMC e colesterol muito próximos dos pacientes saudáveis.
+
+![Falsos negativos comparados com os doentes encontrados e com os saudáveis](figures/t26_falsos_negativos.png)
+
+**Consequência prática:** em paciente jovem, com pressão normal ou sem fatores de risco aparentes, um resultado de
+risco baixo vale pouco. Nesses grupos, a avaliação clínica deve pesar mais do que o modelo.
+
+### 8.4 Limitações dos dados
+
+- **Uma única fonte, pouco documentada.** O dataset vem do Kaggle, sem informação clara sobre o país, os hospitais, o
+  período de coleta ou como o diagnóstico foi feito. Não dá para saber a quem os resultados se aplicam.
+- **Amostra que não representa a população geral:** 65% são mulheres, todos têm entre 30 e 65 anos, e metade tem a
+  doença, uma proporção muito maior do que na população.
+- **Dados transversais.** Tudo foi registrado no mesmo exame, junto com o diagnóstico. O modelo identifica **quem já
+  tem** a doença; ele **não prevê quem vai ter** nos próximos anos. Para isso seria preciso acompanhar pacientes ao
+  longo do tempo.
+- **Uma única divisão dos dados.** Os resultados vêm de uma divisão treino/validação/teste, sem intervalos de
+  confiança; diferenças pequenas entre modelos (menos de 0,01 de AUC) não devem ser lidas como reais.
+
+### 8.5 Riscos de usar o modelo em outras populações
+
+- **Menos doença, mais alarmes falsos.** Nos dados, metade dos pacientes tem a doença. Numa população em que só 10%
+  têm, mantendo a mesma sensibilidade e especificidade do teste, só **19 de cada 100 pacientes sinalizados** seriam
+  doentes (contra 67 aqui), e o risco estimado pelo modelo ficaria superestimado. O limiar e a calibração teriam de ser
+  revistos com dados locais.
+- **Idades fora da faixa.** O modelo nunca viu pacientes com menos de 30 ou mais de 65 anos; o resultado nessas idades
+  é uma extrapolação.
+- **Outros hábitos de registro.** Uma clínica que mede a pressão com mais precisão, ou que registra colesterol em
+  mg/dL, produz dados diferentes dos usados no treino.
+- **Antes de usar em qualquer serviço**, o modelo precisa ser testado nos pacientes daquele serviço e acompanhado
+  depois da implantação, com revisão periódica dos casos não sinalizados.
+
+### 8.6 Próximos passos
+
+1. **Variáveis clínicas mais ricas:** colesterol (LDL, HDL) e glicemia em valores contínuos, uso de anti-hipertensivos
+   e estatinas, histórico familiar, tabagismo em maços-ano e exames como o eletrocardiograma (o extra da seção 10 é um
+   primeiro passo nessa direção).
+2. **Validação externa:** testar o modelo em dados de outro hospital ou país, com a proporção real de doentes, antes de
+   qualquer uso.
+3. **Dados longitudinais:** acompanhar pacientes ao longo do tempo para prever risco futuro, como fazem os escores
+   clínicos de risco cardiovascular.
+4. **Avaliar com o médico:** medir, num estudo piloto, se a priorização reduz o tempo até o diagnóstico sem aumentar
+   demais a fila de exames.
 ## 9. Conclusão
 
 ## 10. Extra: diagnóstico por imagem de ECG (CNN)

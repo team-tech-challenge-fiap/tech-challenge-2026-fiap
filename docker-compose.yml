@@ -1,8 +1,9 @@
-# Uso rápido:
-#   docker compose build
-#   docker compose run --rm pipeline   -> pipeline final: modelo final + avaliação no teste
+# Um comando só (treina, avalia no teste e abre Jupyter, demo e API):
+#   docker compose up --build
+#
+# Outros usos:
+#   docker compose run --rm pipeline   -> só o pipeline final: modelo final + avaliação no teste
 #   docker compose run --rm train      -> treina o Random Forest no conjunto A (cardio.models.train)
-#   docker compose up app api jupyter  -> sobe demo (8501), API (8000) e Jupyter (8888)
 #   docker compose run --rm tests      -> roda os testes
 
 x-base: &base
@@ -19,7 +20,6 @@ services:
   pipeline:
     <<: *base
     command: python -m cardio.pipeline
-    profiles: ["jobs"]
 
   train:
     <<: *base
@@ -43,15 +43,24 @@ services:
       - MPLBACKEND=module://matplotlib_inline.backend_inline
     ports:
       - "8888:8888"
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully   # só sobe depois do pipeline terminar sem erro
 
   api:
     <<: *base
     command: uvicorn cardio.api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
     ports:
       - "8000:8000"
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully   # só sobe depois do pipeline terminar sem erro
 
   app:
     <<: *base
     command: streamlit run app/streamlit_app.py --server.address=0.0.0.0 --server.port=8501
     ports:
       - "8501:8501"
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully   # só sobe depois do pipeline terminar sem erro
