@@ -123,6 +123,24 @@ Imports: `from cardio.config import SEED, DATA_PATH` (o pacote é `cardio`, dent
 Pré-requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e **aberto**.
 A imagem usa `python:3.11-slim` e instala as versões fixadas do `requirements.txt`. O dataset já vai dentro da imagem.
 
+### Rodar tudo com um comando
+
+Na pasta do projeto:
+
+```bash
+docker compose up --build
+```
+
+Esse comando constrói a imagem, roda o **pipeline final** (treina o XGBoost com treino + validação, aplica o limiar
+de 0,36 e avalia uma única vez no teste) e, quando ele termina sem erro, abre:
+
+- Jupyter com os notebooks: http://localhost:8888
+- Demo (Streamlit): http://localhost:8501
+- API: http://localhost:8000/docs
+
+Os resultados ficam em `models/final_model.joblib` e `results/test_results.csv`. Para parar, `Ctrl + C`
+(ou `docker compose down`).
+
 ### Opção 1: `docker run` (avaliação / quem só quer rodar o projeto)
 
 ```bash
@@ -173,12 +191,13 @@ docker run --rm cardio-classifier pytest tests/test_data.py -q   # só qualidade
 Monta a pasta inteira do projeto como volume, então alterações no código valem sem reconstruir a imagem.
 
 ```bash
+docker compose up --build             # tudo: pipeline final e depois Jupyter, demo e API
 docker compose build                  # constrói a imagem (repetir só quando o requirements.txt mudar)
-docker compose up jupyter             # Jupyter em http://localhost:8888 (Ctrl + C para parar)
-docker compose run --rm pipeline      # pipeline final: modelo final + avaliação no teste
+docker compose up jupyter             # pipeline final e depois o Jupyter em http://localhost:8888
+docker compose run --rm pipeline      # só o pipeline final: modelo final + avaliação no teste
 docker compose run --rm train         # treina o Random Forest (conjunto A) na validação -> models/random_forest_A.joblib
 docker compose run --rm tests         # roda os testes
-docker compose up api app             # API (http://localhost:8000/docs) e demo (http://localhost:8501)
+docker compose up api app             # pipeline final e depois API (http://localhost:8000/docs) e demo (http://localhost:8501)
 ```
 
 ### Problemas comuns
