@@ -36,6 +36,11 @@ services:
     command: >
       jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
       --ServerApp.token='' --ServerApp.password='' --notebook-dir=/app
+    environment:
+      - PROJECT_ROOT=/app
+      - PYTHONPATH=/app/src
+      # O Dockerfile usa MPLBACKEND=Agg (certo para scripts), mas com ele os gráficos não aparecem no notebook
+      - MPLBACKEND=module://matplotlib_inline.backend_inline
     ports:
       - "8888:8888"
 
