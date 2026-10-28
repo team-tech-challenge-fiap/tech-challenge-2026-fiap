@@ -200,10 +200,33 @@ As imagens **não ficam no Git** (são ~300 MB zipadas). Dataset: [Cardiovascula
    Alternativa pela API do Kaggle (exige o token `kaggle.json`):
    `kaggle datasets download -d jayaprakashpondy/ecgimages -p data` (gera `data/ecgimages.zip`; use `--zip` com esse caminho no passo 4).
 4. Prepare as imagens: `python -m cardio_visual.data.preparar` (ou `--zip <caminho do zip>`).
+   A preparação também **reserva 1 imagem de cada classe para um teste cego** (professor e apresentação): sorteadas com
+   `SEED = 42`, saem do treino e vão para `data/demo/ecg_1.jpg` ... `ecg_4.jpg`, com nomes que não revelam a classe.
+   A resposta fica em `data/demo_gabarito.csv` (fora da pasta entregue a quem testa).
 
 O zip vem com as pastas `train/` e `test/`, mas **elas não são usadas como estão**: todas as imagens vão para **uma pasta só por
 classe** em `data/images/<classe>/`, sem cópias repetidas, e a divisão em treino, validação e teste é **feita por nós**
 (70/15/15 estratificado, `SEED = 42`), como no projeto tabular. O motivo está na seção de qualidade do dataset.
+
+### Qualidade do dataset (verificada em 27/10/2026)
+
+`python -m cardio_visual.data.preparar` mostra este resumo. O zip tem 1.376 arquivos, mas só **491 imagens diferentes**:
+
+| Classe (pasta no Kaggle) | Nome curto | Arquivos no zip | Imagens únicas |
+|---|---|---|---|
+| ECG Images of Myocardial Infarction Patients | `infarto` | 351 | **30** |
+| ECG Images of Patient that have History of MI | `historico_infarto` | 284 | 86 |
+| ECG Images of Patient that have abnormal heartbeat | `batimento_anormal` | 345 | 233 |
+| Normal Person ECG Images | `normal` | 396 | 142 |
+
+- **Todas as 448 imagens de `test/` são cópias de imagens de `train/`**, com a mesma classe. Avaliar no `test/` original
+  mediria o modelo em imagens que ele já viu no treino.
+- O próprio `train/` repete imagens: cada ECG de infarto aparece até 8 vezes, e os de histórico de infarto e normal, 2 vezes.
+- Nenhum arquivo corrompido; todas as imagens são RGB de 2213 × 1572 pixels (ECG de 12 derivações); nenhuma quase-duplicata.
+- O dataset não tem descrição nem licença no Kaggle ("Unknown").
+
+Consequência: a classe `infarto` tem só 30 imagens, então a validação e o teste terão poucas imagens dela e a métrica dessa
+classe é pouco confiável. `data/images/origem.csv` registra de quais arquivos do zip veio cada imagem.
 
 ### Instalação
 
