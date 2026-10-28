@@ -1,16 +1,76 @@
 # Cardio IA — Tech Challenge FIAP Fase 1
 
-Projeto de análise e classificação de risco cardiovascular usando `cardio_train.csv`
-([Kaggle — Cardiovascular Disease Dataset](https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset)).
+Sistema de apoio à triagem que estima o risco de doença cardiovascular a partir de dados clínicos simples.
+Projeto da Fase 1 do Tech Challenge da Pós-Tech FIAP.
 
-O dataset deve ser um CSV separado por `;` com as colunas `id`, `age`, `gender`, `height`, `weight`,
-`ap_hi`, `ap_lo`, `cholesterol`, `gluc`, `smoke`, `alco`, `active` e `cardio`.
+> **Aviso:** o modelo é apenas um **apoio à decisão médica**. Ele ajuda a priorizar quem examinar primeiro,
+> mas não dá diagnóstico: a palavra final é sempre do médico.
+
+## O problema e o objetivo
+
+As doenças cardiovasculares são a principal causa de morte no mundo, e muitos casos só são descobertos quando
+já há sintomas graves. Em postos de saúde e triagens com muitos pacientes, nem todos conseguem fazer exames
+mais completos logo de início.
+
+O objetivo do projeto é verificar se dados que qualquer atendimento coleta (idade, sexo, altura, peso, pressão
+arterial, colesterol, glicose e hábitos de vida) permitem apontar quem tem mais chance de ter doença
+cardiovascular, para que essas pessoas sejam examinadas primeiro.
+
+Para isso, o time explorou e limpou os dados, comparou cinco algoritmos de classificação (Regressão Logística,
+KNN, Random Forest, XGBoost e SVM) sempre com a mesma divisão em treino, validação e teste, ajustou o limiar de
+decisão para priorizar a detecção de doentes e explicou as decisões do modelo final com SHAP. O resultado está
+resumido em [Resultados](#resultados). Como complemento opcional, o projeto também classifica imagens de
+eletrocardiograma com redes neurais (seção [Extra](#extra-diagnóstico-por-imagem-de-ecg-cnn)).
+
+## Integrantes e links
+
+| Integrante | GitHub |
+|---|---|
+| Guilherme Saar Santos | [@GuilhermeSaarSantos](https://github.com/GuilhermeSaarSantos) |
+| Wesley Berto | [@WesleyBert](https://github.com/WesleyBert) |
+| Michel Zarif | [@MichelZarif](https://github.com/MichelZarif) |
+| Luis Felipe Laudacio | [@luislaudacio](https://github.com/luislaudacio) |
+| Sara Felix | [@sarafelix25](https://github.com/sarafelix25) |
+
+- **Vídeo de demonstração:** _link a publicar (T36)_
+- **Relatório técnico:** [`results/relatorio_tecnico.md`](results/relatorio_tecnico.md) (o PDF final sai na T35)
+- **Repositório:** <https://github.com/team-tech-challenge-fiap/tech-challenge-2026-fiap>
+
+## Guia rápido
+
+Com o [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e **aberto**, na pasta do projeto:
+
+```bash
+docker compose up --build
+```
+
+Esse comando monta a imagem, roda o **pipeline final** (treina o modelo escolhido e o avalia uma única vez no
+teste) e, quando ele termina, abre o Jupyter em http://localhost:8888, a demo em http://localhost:8501 e a API
+em http://localhost:8000/docs. Para parar, `Ctrl + C`. Os outros comandos e a opção sem Docker estão em
+[Executando com Docker](#executando-com-docker) e [Executando sem Docker](#executando-sem-docker).
+
+| O que | Comando (Docker) | Tempo aproximado |
+|---|---|---|
+| Montar a imagem | `docker compose build` | 5 a 6 min (só na primeira vez) |
+| Pipeline final: treino do modelo final + teste | `docker compose run --rm pipeline` | 20 s |
+| Testes automatizados (137) | `docker compose run --rm tests` | 1 min |
+| Treinar um modelo e avaliar na validação | `docker compose run --rm train` | 15 s a 1 min por modelo |
+| Busca de hiperparâmetros de um modelo (`--tune`) | ver [Executando sem Docker](#executando-sem-docker) | 4 a 8 min por modelo |
+| Notebook final (`00_projeto_final.ipynb`) | `docker compose up jupyter` (roda o pipeline antes) | 15 s para rodar inteiro |
+
+O notebook final **carrega o modelo salvo pelo pipeline final** (`models/final_model.joblib`, que não vai para o
+Git). Pelo `docker compose up` o pipeline roda antes sozinho; nos outros caminhos, rode o pipeline antes de abrir
+o notebook. Tempos medidos num computador com 8 núcleos.
 
 ## Dataset
 
 O dataset é o **Cardiovascular Disease Dataset** do Kaggle:
 <https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset>.
-São 70.000 pacientes e 13 colunas (arquivo `data/raw/cardio_train.csv`, separador `;`).
+São 70.000 pacientes e 13 colunas, num CSV separado por `;`.
+
+O arquivo **já vem no repositório**, em `data/raw/cardio_train.csv`, e não é preciso baixar nada. Se ele faltar,
+baixe o `cardio_train.csv` na página do Kaggle (exige login) e salve exatamente nesse caminho. O código confere
+as colunas ao carregar e avisa se alguma estiver faltando.
 
 | Coluna | Significado | Observação |
 |---|---|---|
@@ -23,7 +83,58 @@ São 70.000 pacientes e 13 colunas (arquivo `data/raw/cardio_train.csv`, separad
 | `smoke`, `alco`, `active` | fuma, bebe, faz atividade física | autodeclarados (0/1) |
 | `cardio` | **alvo** | 1 = doença cardiovascular |
 
+## Resultados
+
+Depois da limpeza ficam 68.509 pacientes, divididos uma única vez em treino (70%), validação (15%) e teste (15%).
+Os modelos foram comparados na **validação**, com o corte padrão de 0,5 (conjunto A, as 11 variáveis originais):
+
+| Modelo | AUC | Recall | Precision | F1 | Acurácia |
+|---|---|---|---|---|---|
+| **XGBoost (modelo final)** | **0,792** | 0,679 | 0,745 | 0,711 | 0,726 |
+| SVM | 0,792 | 0,693 | 0,741 | 0,716 | 0,728 |
+| Random Forest | 0,791 | 0,673 | 0,752 | 0,711 | 0,729 |
+| KNN | 0,785 | 0,660 | 0,753 | 0,704 | 0,725 |
+| Regressão Logística | 0,783 | 0,671 | 0,750 | 0,708 | 0,727 |
+| Referência (sorteio) | 0,508 | 0,494 | 0,504 | 0,499 | 0,509 |
+
+Fontes: `results/comparison_table.csv` (T23) e, para o SVM, `results/val_results.csv` (T19, treinado depois da
+comparação da T23; empata com o XGBoost, mas não o supera). Os cinco algoritmos ficam no mesmo patamar de AUC:
+o limite está nas variáveis disponíveis, não no algoritmo. O conjunto B (com as variáveis derivadas) mudou a AUC
+em menos de 0,01 em todos os modelos.
+
+**Modelo final no teste**, avaliado uma única vez (XGBoost, conjunto A, limiar de decisão ajustado para 0,36 na
+validação para encontrar pelo menos 80% dos doentes):
+
+| AUC | Recall | Precision | F1 | Especificidade | Acurácia |
+|---|---|---|---|---|---|
+| 0,810 | 0,831 | 0,669 | 0,742 | 0,598 | 0,713 |
+
+Na prática, **a cada 1.000 pacientes**, o modelo deixa de sinalizar cerca de 83 doentes e encaminha cerca de 203
+pessoas saudáveis para um exame de confirmação. O corte em 0,36, em vez de 0,5, troca alarmes falsos por menos
+doentes perdidos, porque numa triagem o falso negativo é o erro mais grave (fonte: `results/test_results.csv`).
+
+<p align="center">
+  <img src="results/figures/roc_A.png" alt="Curvas ROC dos cinco modelos na validação" width="48%">
+  <img src="results/figures/t25_shap_summary.png" alt="SHAP: contribuição de cada variável no modelo final" width="48%">
+</p>
+
+À esquerda, as curvas ROC dos cinco modelos praticamente se sobrepõem. À direita, o SHAP mostra que a pressão
+sistólica, a idade e o colesterol são o que mais pesa na decisão do modelo final, o que concorda com os fatores
+de risco conhecidos na medicina. Lembrando: o modelo é **apoio à decisão**, nunca diagnóstico. Detalhes e
+limitações estão no [relatório técnico](results/relatorio_tecnico.md).
+
 ## Estrutura
+
+O projeto separa **código reutilizável** (`src/cardio/`, um pacote Python importado por todos) de **análises**
+(`notebooks/`, que só chamam funções do pacote) e de **resultados gerados** (`results/` e `models/`):
+
+- `data/`: o dataset original, que nunca é alterado.
+- `src/cardio/`: limpeza, divisão dos dados, variáveis, modelos, avaliação e o pipeline final.
+- `src/cardio_visual/`: o extra de imagens de ECG, com dependências e Docker próprios (seção Extra).
+- `notebooks/`: um notebook por tarefa, numerado; o `00_projeto_final.ipynb` conta a história inteira.
+- `results/`: tabelas (`.csv`), figuras (`figures/`) e o relatório técnico.
+- `models/`: modelos treinados (`.joblib`), gerados pelos comandos de treino.
+- `tests/`: testes automatizados (`pytest`), que conferem dados, divisão, modelos e avaliação.
 
 ```text
 data/
@@ -32,7 +143,7 @@ data/
   images/<classe>/               # extra: ECGs por classe, gerados por cardio_visual.data.preparar (fora do Git)
   demo/                          # extra: 4 ECGs do teste cego (fora do Git; gabarito em data/demo_gabarito.csv)
 notebooks/
-  00_projeto_final.ipynb         # notebook de ponta a ponta (T29, em construção)
+  00_projeto_final.ipynb         # T29: notebook de ponta a ponta (rode o pipeline final antes)
   01_eda_visao_geral.ipynb       # T03: visão geral, alvo e qualidade dos dados
   02_eda_demografia_imc.ipynb    # T04: idade, sexo, altura, peso e IMC
   03_eda_pressao_arterial.ipynb  # T05: pressão arterial
@@ -62,7 +173,7 @@ src/cardio/
     train.py                     # CLI de treino: --modelo, --features, --sample (T13)
     evaluate.py                  # T20: evaluate(), matriz de confusão, summary_table() e baseline
     predict.py                   # predição com modelo salvo
-    explain.py                   # SHAP (T25); feature importance (T24, TODO)
+    explain.py                   # SHAP (T25) e feature importance (T24)
   visualization/
     eda.py                       # gráficos da EDA
     plots.py                     # TODO: gráficos para o relatório
@@ -90,7 +201,9 @@ app/
 models/                          # modelos gerados (.joblib) e o modelo final do extra (cnn_resnet18_448.pt)
 results/
   figures/                       # gráficos gerados (.png)
-  relatorio_tecnico.md           # esqueleto do relatório
+  relatorio_tecnico.md           # relatório técnico (base do PDF final)
+  comparison_table.csv           # T23: comparação dos modelos na validação
+  test_results.csv               # T23: avaliação única do modelo final no teste
 tests/                           # testes automatizados
 Dockerfile · docker-compose.yml · requirements.txt · pyproject.toml
 Dockerfile.visual · docker-compose.visual.yml · requirements-cnn.txt   # Docker e dependências do extra
@@ -162,8 +275,8 @@ docker run --rm -v "$(pwd)/results:/app/results" -v "$(pwd)/models:/app/models" 
 ```
 
 Saída: `models/final_model.joblib` (modelo + limiar) e `results/test_results.csv` (accuracy, AUC, recall,
-precision, F1, especificidade e impacto a cada 1.000 pacientes). O pipeline leva cerca de 30 segundos, quase
-tudo para carregar as bibliotecas (o build da imagem, só na primeira vez, leva alguns minutos).
+precision, F1, especificidade e impacto a cada 1.000 pacientes). O pipeline leva cerca de 20 segundos, quase
+tudo para carregar as bibliotecas (o build da imagem, só na primeira vez, leva de 5 a 6 minutos).
 
 **Treinar outro modelo** e avaliá-lo na validação (acrescente o comando no fim):
 
@@ -173,13 +286,17 @@ docker run --rm -v "${PWD}/results:/app/results" -v "${PWD}/models:/app/models" 
 ```
 
 **Abrir o Jupyter** e acessar http://localhost:8888 (a pasta do projeto é montada, então o que for salvo nos
-notebooks fica na sua máquina):
+notebooks fica na sua máquina). O `-e MPLBACKEND=...` faz os gráficos aparecerem no notebook:
 
 ```powershell
-docker run --rm -p 8888:8888 -v "${PWD}:/app" cardio-classifier jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token=''
+docker run --rm -p 8888:8888 -v "${PWD}:/app" -e MPLBACKEND=module://matplotlib_inline.backend_inline cardio-classifier jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token=''
 ```
 
-**Rodar os testes:**
+Para ver o projeto de ponta a ponta, abra `notebooks/00_projeto_final.ipynb` e use **Run > Run All Cells**
+(cerca de 15 s; precisa do pipeline final rodado antes).
+
+**Rodar os testes** (cerca de 1 minuto; 137 passam e 8 do extra de imagens são pulados, porque a imagem não tem
+o PyTorch):
 
 ```bash
 docker run --rm cardio-classifier pytest -q
@@ -210,14 +327,37 @@ docker compose up api app             # pipeline final e depois API (http://loca
 
 ## Executando sem Docker
 
+Pré-requisito: **Python 3.11**, a mesma versão da imagem Docker e a testada com as versões fixadas do
+`requirements.txt`. A instalação leva cerca de 6 minutos.
+
 ```powershell
-python -m venv .venv
+# Windows (PowerShell)
+py -3.11 -m venv .venv
 .venv\Scripts\activate
-python -m pip install -e ".[dev]"
-python -m cardio.models.train --modelo random_forest --features A   # ou: cardio-train --modelo ...
-pytest
-pytest tests/test_data.py   # só qualidade dos dados e vazamento (T12)
 ```
+
+```bash
+# Linux / macOS
+python3.11 -m venv .venv
+source .venv/bin/activate
+```
+
+Depois, nos dois sistemas:
+
+```bash
+python -m pip install -r requirements.txt   # bibliotecas nas versões fixadas
+python -m pip install -e . --no-deps        # o pacote cardio (src/), sem reinstalar as bibliotecas
+
+python -m cardio.pipeline                   # pipeline final: modelo final + avaliação no teste (~20 s)
+pytest                                      # todos os testes (~1 min; os do extra são pulados sem o PyTorch)
+pytest tests/test_data.py                   # só qualidade dos dados e vazamento (T12)
+python -m cardio.models.train --modelo xgb --features A          # um modelo na validação (15 s a 1 min)
+python -m cardio.models.train --modelo svm --features A --tune   # com busca de hiperparâmetros (4 a 8 min)
+jupyter lab                                 # abre o Jupyter; rode o notebooks/00_projeto_final.ipynb (~15 s)
+```
+
+No Windows, se a instalação falhar com `No such file or directory` num caminho muito longo, crie o `.venv` numa
+pasta mais curta (ex.: `C:\venvs\cardio`): o Windows limita caminhos a 260 caracteres.
 
 `tests/test_data.py` (T12) garante que `id` e `cardio` nunca entram nas features, que a limpeza não deixa
 valores fora das faixas, que treino, validação e teste não têm pacientes em comum, que o split é
@@ -352,9 +492,9 @@ O resultado é **apoio à decisão**: o modelo não substitui a avaliação do m
 
 - [x] Estrutura do projeto, Dockerfile e README
 - [x] Dataset incluído
-- [ ] EDA (estatísticas, distribuições, correlação)
-- [ ] Pré-processamento
-- [ ] 2+ modelos de classificação, com treino / validação / teste
-- [ ] Avaliação (accuracy, recall, F1) e interpretação (feature importance, SHAP)
+- [x] EDA (estatísticas, distribuições, correlação)
+- [x] Pré-processamento
+- [x] 2+ modelos de classificação, com treino / validação / teste
+- [x] Avaliação (accuracy, recall, F1) e interpretação (feature importance, SHAP)
 - [ ] Relatório técnico (PDF)
 - [ ] Vídeo de demonstração (até 15 min)
