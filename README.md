@@ -41,28 +41,26 @@ eletrocardiograma com redes neurais (seção [Extra](#extra-diagnóstico-por-ima
 Com o [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e **aberto**, na pasta do projeto:
 
 ```bash
-docker build -t cardio-classifier .
+docker compose up --build
 ```
 
-```powershell
-docker run --rm -v "${PWD}/results:/app/results" -v "${PWD}/models:/app/models" cardio-classifier
-```
-
-O primeiro comando monta a imagem e o segundo roda o pipeline final: treina o modelo escolhido e o avalia uma
-única vez no teste. Os detalhes, a versão para Linux/macOS e a opção sem Docker estão nas seções
+Esse comando monta a imagem, roda o **pipeline final** (treina o modelo escolhido e o avalia uma única vez no
+teste) e, quando ele termina, abre o Jupyter em http://localhost:8888, a demo em http://localhost:8501 e a API
+em http://localhost:8000/docs. Para parar, `Ctrl + C`. Os outros comandos e a opção sem Docker estão em
 [Executando com Docker](#executando-com-docker) e [Executando sem Docker](#executando-sem-docker).
 
 | O que | Comando (Docker) | Tempo aproximado |
 |---|---|---|
-| Montar a imagem | `docker build -t cardio-classifier .` | 5 a 6 min (só na primeira vez) |
-| Pipeline final: treino do modelo final + teste | `docker run ... cardio-classifier` (acima) | 20 s |
+| Montar a imagem | `docker compose build` | 5 a 6 min (só na primeira vez) |
+| Pipeline final: treino do modelo final + teste | `docker compose run --rm pipeline` | 20 s |
 | Testes automatizados (137) | `docker compose run --rm tests` | 1 min |
 | Treinar um modelo e avaliar na validação | `docker compose run --rm train` | 15 s a 1 min por modelo |
 | Busca de hiperparâmetros de um modelo (`--tune`) | ver [Executando sem Docker](#executando-sem-docker) | 4 a 8 min por modelo |
-| Notebook final (`00_projeto_final.ipynb`) | `docker compose up jupyter` | 15 s para rodar inteiro |
+| Notebook final (`00_projeto_final.ipynb`) | `docker compose up jupyter` (roda o pipeline antes) | 15 s para rodar inteiro |
 
 O notebook final **carrega o modelo salvo pelo pipeline final** (`models/final_model.joblib`, que não vai para o
-Git), então rode o pipeline antes de abrir o notebook. Tempos medidos num computador com 8 núcleos.
+Git). Pelo `docker compose up` o pipeline roda antes sozinho; nos outros caminhos, rode o pipeline antes de abrir
+o notebook. Tempos medidos num computador com 8 núcleos.
 
 ## Dataset
 
