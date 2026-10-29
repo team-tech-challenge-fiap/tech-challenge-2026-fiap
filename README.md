@@ -32,8 +32,8 @@ eletrocardiograma com redes neurais (seção [Extra](#extra-diagnóstico-por-ima
 | Luis Felipe Laudacio | [@luislaudacio](https://github.com/luislaudacio) |
 | Sara Felix | [@sarafelix25](https://github.com/sarafelix25) |
 
-- **Vídeo de demonstração:** _link a publicar (T36)_
-- **Relatório técnico:** [`results/relatorio_tecnico.md`](results/relatorio_tecnico.md) (o PDF final sai na T35)
+- **Vídeo de demonstração:** <https://youtu.be/3EhuysvC3Gg>
+- **Relatório técnico:** [`results/relatorio_tecnico.md`](results/relatorio_tecnico.md); PDF em [`entrega/Tech_Challenge_Fase1.pdf`](entrega/Tech_Challenge_Fase1.pdf) (em revisão; para gerar de novo: `python entrega/gerar_pdf.py`)
 - **Repositório:** <https://github.com/team-tech-challenge-fiap/tech-challenge-2026-fiap>
 
 ## Guia rápido
@@ -497,4 +497,4 @@ O resultado é **apoio à decisão**: o modelo não substitui a avaliação do m
 - [x] 2+ modelos de classificação, com treino / validação / teste
 - [x] Avaliação (accuracy, recall, F1) e interpretação (feature importance, SHAP)
 - [ ] Relatório técnico (PDF)
-- [ ] Vídeo de demonstração (até 15 min)
+- [x] Vídeo de demonstração (até 15 min): <https://youtu.be/3EhuysvC3Gg>
