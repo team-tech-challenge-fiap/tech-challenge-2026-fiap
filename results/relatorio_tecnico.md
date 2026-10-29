@@ -231,7 +231,7 @@ Para o KNN, a busca utilizou uma amostra estratificada de 10.000 pacientes, redu
 | XGBoost A | `n_estimators=200`; `max_depth=4`; `learning_rate=0.03`; `subsample=0.8`; `colsample_bytree=0.8` | 0,52 s |
 | SVM A | `C=0.1`; `gamma=0.1`; Nyström com 500 componentes | 29,20 s |
 
-*Nota:* os tempos foram obtidos dos registros disponíveis, mas representam etapas distintas: no Random Forest, o valor inclui a busca de hiperparâmetros; nos demais casos, os registros apresentados correspondem a execuções de treinamento. O tempo da Regressão Logística ainda precisa ser confirmado para a configuração balanceada.
+*Nota:* os tempos foram obtidos dos registros disponíveis, mas representam etapas distintas: no Random Forest, o valor inclui a busca de hiperparâmetros; nos demais casos, os registros apresentados correspondem a execuções de treinamento.
 
 Os resultados comparativos podem ser consultados em `results/comparison_table.csv`, e as curvas ROC dos modelos estão disponíveis em `results/figures/roc_A.png` e `results/figures/roc_A_vs_B_xgb.png`.
 
