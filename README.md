@@ -496,5 +496,5 @@ O resultado é **apoio à decisão**: o modelo não substitui a avaliação do m
 - [x] Pré-processamento
 - [x] 2+ modelos de classificação, com treino / validação / teste
 - [x] Avaliação (accuracy, recall, F1) e interpretação (feature importance, SHAP)
-- [ ] Relatório técnico (PDF)
+- [x] Relatório técnico (PDF): [`entrega/Tech_Challenge_Fase1.pdf`](entrega/Tech_Challenge_Fase1.pdf)
 - [x] Vídeo de demonstração (até 15 min): <https://youtu.be/3EhuysvC3Gg>
