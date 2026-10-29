@@ -2,7 +2,7 @@
 
 **Equipe:** Guilherme Saar Santos, Wesley Berto, Michel Zarif, Luis Felipe Laudacio e Sara Felix
 **Repositório:** <https://github.com/team-tech-challenge-fiap/tech-challenge-2026-fiap>
-**Vídeo:** em andamento
+**Vídeo:** <https://youtu.be/3EhuysvC3Gg>
 
 ## 1. Problema
 
